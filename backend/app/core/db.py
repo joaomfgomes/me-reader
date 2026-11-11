@@ -1,6 +1,6 @@
 """Ligação à base de dados, modelos base e acesso às migrações Alembic."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from alembic import command
@@ -10,8 +10,37 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import DateTime, Engine, MetaData, String, Text, create_engine, event
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy.types import TypeDecorator
 
 from app.core.config import BACKEND_DIR
+
+
+class UtcDateTime(TypeDecorator):
+    """Coluna de data e hora que é sempre UTC e sempre traz o fuso horário.
+
+    O SQLite não guarda fusos horários: uma data gravada com fuso volta sem
+    ele ("naive"). O Postgres devolve-a com fuso. Este tipo iguala os dois
+    comportamentos, para o código e a API verem sempre datas em UTC com fuso
+    explícito, seja qual for a base de dados.
+    """
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_bind_param(self, value: datetime | None, dialect) -> datetime | None:
+        # A caminho da base de dados: recusar datas sem fuso evita gravar uma
+        # hora local a pensar que é UTC.
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            raise ValueError("naive datetime: usa datetime.now(UTC)")
+        return value.astimezone(UTC)
+
+    def process_result_value(self, value: datetime | None, dialect) -> datetime | None:
+        # A caminho do código: se veio sem fuso (SQLite), sabemos que é UTC.
+        if value is None:
+            return None
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 class Base(DeclarativeBase):
@@ -48,7 +77,7 @@ class AppMeta(Base):
 
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
     value: Mapped[str] = mapped_column(Text)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(UtcDateTime)
 
 
 def create_db_engine(database_url: str) -> Engine:

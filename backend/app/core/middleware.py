@@ -10,8 +10,10 @@ import logging
 import time
 import traceback
 import uuid
+from collections.abc import Callable
 
 from starlette.datastructures import Headers, MutableHeaders
+from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.errors import problem_response
@@ -56,6 +58,55 @@ class HostValidationMiddleware:
             return
 
         await self.app(scope, receive, send)
+
+
+class BodySizeLimitMiddleware:
+    """Recusa pedidos cujo corpo ultrapasse um limite, sem o ler até ao fim.
+
+    Sem isto, um upload de vários GB seria recebido e guardado por inteiro
+    antes de a rota ter oportunidade de o recusar.
+    """
+
+    def __init__(self, app: ASGIApp, max_bytes: Callable[[], int]) -> None:
+        self.app = app
+        # Recebe uma função, e não um número, para o limite ser lido em cada
+        # pedido. Assim os testes conseguem baixá-lo temporariamente.
+        self._max_bytes = max_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        max_bytes = self._max_bytes()
+
+        # Caso simples: o cliente declara o tamanho no cabeçalho Content-Length
+        # e podemos recusar antes de receber um único byte do corpo.
+        declared = Headers(scope=scope).get("content-length", "")
+        if declared.isdigit() and int(declared) > max_bytes:
+            response = problem_response(
+                413, "file_too_large", "Ficheiro demasiado grande", "O pedido excede o limite."
+            )
+            await response(scope, receive, send)
+            return
+
+        # O Content-Length pode faltar (envio aos bocados) ou mentir, por isso
+        # contamos também os bytes que vão chegando.
+        received = 0
+
+        async def limited_receive() -> Message:
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > max_bytes:
+                    # Tem de ser uma HTTPException: é o único tipo de erro que
+                    # o FastAPI deixa passar intacto enquanto lê o corpo do
+                    # pedido. O handler em errors.py converte-a em problem+json.
+                    raise HTTPException(status_code=413)
+            return message
+
+        await self.app(scope, limited_receive, send)
 
 
 class RequestContextMiddleware:

@@ -15,6 +15,15 @@ from app.core.config import Settings
 from app.core.db import run_migrations
 from app.main import create_app
 
+# "Alice's Adventures in Wonderland", do Project Gutenberg (ver fixtures/README.md).
+ALICE_PATH = Path(__file__).parent / "fixtures" / "pg11-alice.epub"
+
+
+@pytest.fixture(scope="session")
+def alice_bytes() -> bytes:
+    # scope="session": o ficheiro é lido do disco uma vez para todos os testes.
+    return ALICE_PATH.read_bytes()
+
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:

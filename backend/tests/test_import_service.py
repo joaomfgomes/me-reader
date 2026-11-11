@@ -4,7 +4,6 @@ import hashlib
 import logging
 import re
 from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -18,15 +17,6 @@ from app.importing.models import Block, Chapter, Document, Sentence
 from app.importing.service import UNTITLED, import_epub
 from app.storage.disk import DiskStorage
 from tests.epub_factory import make_epub
-
-# "Alice's Adventures in Wonderland", do Project Gutenberg (ver fixtures/README.md).
-ALICE_PATH = Path(__file__).parent / "fixtures" / "pg11-alice.epub"
-
-
-@pytest.fixture(scope="session")
-def alice_bytes() -> bytes:
-    # scope="session": o ficheiro é lido do disco uma vez para todos os testes.
-    return ALICE_PATH.read_bytes()
 
 
 @pytest.fixture

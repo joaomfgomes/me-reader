@@ -9,7 +9,7 @@ A arquitetura completa está em `docs/arquitetura.md` e as decisões em `docs/ad
 **Fase 1 em curso, dividida em três entregas.** Atualiza esta secção no fim de cada fase.
 
 1. Importação e modelo de dados: feita (2026-11-11).
-2. API: rotas `/documents`, posição de leitura e estado de processamento. Por fazer.
+2. API: rotas `/documents` e posição de leitura. Feita (2026-11-11).
 3. Frontend: biblioteca e leitor. Por fazer.
 
 Cada entrega tem o seu plano e a sua aprovação; não avances para a seguinte sem pedido explícito.
@@ -18,14 +18,26 @@ O que existe da Fase 0: backend FastAPI com `GET /api/v1/health`, SQLite em modo
 
 O que existe da Fase 1:
 
-- `importing/`: `import_epub(session, storage, data)` em `service.py` valida o ficheiro, extrai o texto, deteta a língua, segmenta e grava. Ainda não há rota que o chame.
+- `importing/`: `import_epub(session, storage, data)` em `service.py` valida o ficheiro, extrai o texto, deteta a língua, segmenta e grava.
+- `api/documents.py`: `POST /documents` (upload multipart, campo `file`), `GET /documents` (cursor), `GET`/`PATCH`/`DELETE /documents/{id}`, `GET /documents/{id}/chapters/{position}` (posição a começar em 0) e `PUT /documents/{id}/position`. As formas dos pedidos e respostas estão em `api/schemas.py`.
+- Tabela `reading_positions` (migração `0003`), uma linha por documento.
+- `BodySizeLimitMiddleware` corta pedidos acima do limite de upload sem os ler até ao fim.
 - Tabelas `documents`, `chapters`, `blocks` e `sentences` (modelos em `importing/models.py`, migração `0002`). As posições de frases e palavras são índices no texto do bloco.
 - `storage/`: interface `FileStorage` e implementação `DiskStorage`, em `data/files/`.
 - `core/backup.py`: cópia da base de dados para `data/backups/` antes de migrações pendentes, guardando as últimas sete.
 
 Os módulos `audio`, `tutor`, `vocabulary`, `providers` e `usage` estão vazios.
 
+Convenções a manter:
+
+- Colunas de data usam `UtcDateTime` (em `core/db.py`), nunca `DateTime` diretamente: o SQLite devolve datas sem fuso e a API tem de as mostrar sempre em UTC.
+- As rotas são `def` (não `async def`) e recebem a sessão e o armazenamento por `SessionDep` e `StorageDep` (em `api/deps.py`).
+- Erros de negócio lançam `ProblemError` com um `code` estável.
+
 Por decidir ou por fazer mais tarde:
+
+- A importação é síncrona e a resposta traz `status: "ready"`. Não há tabela de jobs; rever se a importação de PDF (Fase 5) for lenta.
+- Mudar a língua de um documento não volta a dividir as frases.
 
 - Os títulos dos capítulos ficam também como primeiro parágrafo do texto; o leitor (entrega 3) decide como os mostrar.
 - As palavras são separadas pela mesma regra nas cinco línguas. Em francês e italiano, "l'homme" conta como uma palavra; rever na Fase 3, quando se carregar em palavras.

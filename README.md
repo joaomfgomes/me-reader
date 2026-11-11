@@ -6,7 +6,13 @@ Corre só no teu Mac, como app web local, sem contas nem pagamentos.
 
 ## Estado
 
-**Fase 1 (importar e ler EPUB) em curso.** O backend já sabe importar um EPUB: valida o ficheiro, extrai o texto, deteta a língua e divide-o em capítulos, blocos, frases e palavras. Ainda não há forma de o fazer pela aplicação: as rotas da API, a biblioteca e o leitor são as próximas entregas. A página inicial mostra apenas o estado do sistema.
+**Fase 1 (importar e ler EPUB) em curso.** O backend já sabe importar um EPUB: valida o ficheiro, extrai o texto, deteta a língua e divide-o em capítulos, blocos, frases e palavras. A API de documentos também já existe (importar, listar, ler capítulos, corrigir, apagar e guardar a posição de leitura). Falta a parte visível: a biblioteca e o leitor são a próxima entrega, e por agora a página inicial mostra apenas o estado do sistema.
+
+Enquanto não há interface, podes importar um livro pela linha de comandos, com a app a correr:
+
+```bash
+curl -F "file=@backend/tests/fixtures/pg11-alice.epub" http://127.0.0.1:8000/api/v1/documents
+```
 
 O plano completo está em [docs/arquitetura.md](docs/arquitetura.md) e as decisões em [docs/adr/](docs/adr/).
 

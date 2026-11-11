@@ -18,6 +18,7 @@ PROBLEM_MEDIA_TYPE = "application/problem+json"
 _HTTP_ERRORS = {
     404: ("not_found", "Recurso não encontrado"),
     405: ("method_not_allowed", "Método não permitido"),
+    413: ("file_too_large", "Ficheiro demasiado grande"),
 }
 
 

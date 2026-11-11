@@ -11,6 +11,7 @@ dependencies = [
     "lingua-language-detector>=2.2.0",
     "pydantic-settings>=2.16.2",
     "pysbd>=0.3.4",
+    "python-multipart>=0.0.33",
     "sqlalchemy>=2",
     "uvicorn[standard]>=0.54.0",
 ]

@@ -10,8 +10,15 @@ from app.core.config import Settings
 from app.core.db import create_db_engine, create_session_factory
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
-from app.core.middleware import HostValidationMiddleware, RequestContextMiddleware
+from app.core.middleware import (
+    BodySizeLimitMiddleware,
+    HostValidationMiddleware,
+    RequestContextMiddleware,
+)
+from app.importing import validation
 from app.storage.disk import DiskStorage
+
+MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -48,6 +55,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # validação do Host fiquem nos logs e levem identificador.
     # Não há CORSMiddleware de propósito: sem ele, o browser não deixa páginas
     # de outras origens lerem respostas desta API.
+    # O limite do corpo é o do ficheiro mais uma folga para o invólucro
+    # multipart (delimitadores e cabeçalhos de cada parte).
+    app.add_middleware(
+        BodySizeLimitMiddleware,
+        max_bytes=lambda: validation.MAX_FILE_BYTES + MULTIPART_OVERHEAD_BYTES,
+    )
     app.add_middleware(HostValidationMiddleware)
     app.add_middleware(RequestContextMiddleware)
 

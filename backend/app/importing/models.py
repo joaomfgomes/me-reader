@@ -6,10 +6,10 @@ Ficam neste módulo porque é a importação que as cria. Os outros módulos
 
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.db import Base
+from app.core.db import Base, UtcDateTime
 
 
 def _now() -> datetime:
@@ -35,12 +35,16 @@ class Document(Base):
     is_private: Mapped[bool] = mapped_column(default=False)
     # Versão da limpeza de texto com que foi importado (ver cleaning.py).
     cleaning_version: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=_now)
 
     # "relationship" não cria colunas: dá acesso aos capítulos como uma lista
     # Python. O cascade faz com que apagar o documento apague também os filhos.
     chapters: Mapped[list["Chapter"]] = relationship(
         back_populates="document", cascade="all, delete-orphan", order_by="Chapter.position"
+    )
+    # No máximo uma posição de leitura por documento (uselist=False).
+    reading_position: Mapped["ReadingPosition | None"] = relationship(
+        back_populates="document", cascade="all, delete-orphan", uselist=False
     )
 
 
@@ -100,3 +104,24 @@ class Sentence(Base):
     words: Mapped[list[list[int]]] = mapped_column(JSON)
 
     block: Mapped[Block] = relationship(back_populates="sentences")
+
+
+class ReadingPosition(Base):
+    """A frase onde o leitor parou. Há no máximo uma linha por documento.
+
+    Não é criada pela importação, mas fica neste ficheiro por ser uma tabela
+    pequena e totalmente dependente do documento.
+    """
+
+    __tablename__ = "reading_positions"
+
+    # A chave primária é o próprio documento: é a base de dados que garante
+    # que não há duas posições para o mesmo livro.
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True
+    )
+    sentence_id: Mapped[int] = mapped_column(ForeignKey("sentences.id", ondelete="CASCADE"))
+    updated_at: Mapped[datetime] = mapped_column(UtcDateTime, default=_now)
+
+    document: Mapped[Document] = relationship(back_populates="reading_position")
+    sentence: Mapped[Sentence] = relationship()
