@@ -19,7 +19,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      # Esta ação não publica a etiqueta curta "v10", só versões completas.
+      - uses: astral-sh/setup-uv@v10.3.3
       # --locked falha se o uv.lock não corresponder ao pyproject.toml, em vez
       # de o atualizar em silêncio. A versão de Python vem de backend/.python-version.
       - run: uv sync --locked
