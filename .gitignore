@@ -1,0 +1,24 @@
+# Dados da aplicação: base de dados, originais, áudio e logs. Nunca vão para o git.
+data/
+
+# Segredos. O modelo sem valores verdadeiros é o .env.example.
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Sistema e editores
+.DS_Store
+.idea/
+.vscode/

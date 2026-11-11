@@ -1,0 +1,40 @@
+[project]
+name = "reader-backend"
+version = "0.1.0"
+description = "Backend do Leitor de línguas"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.20.1",
+    "fastapi>=0.162.4",
+    "pydantic-settings>=2.16.2",
+    "sqlalchemy>=2",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.uv]
+# O backend é uma aplicação, não uma biblioteca para instalar: o uv só gere
+# as dependências e não tenta empacotar o código.
+package = false
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Põe a pasta backend/ no caminho de importação, para os testes poderem
+# fazer "from app... import ..." sem instalar o projeto como pacote.
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F: erros e problemas clássicos (pycodestyle, pyflakes); I: ordem dos imports;
+# UP: sintaxe moderna de Python; B: armadilhas comuns (flake8-bugbear).
+select = ["E", "F", "I", "UP", "B"]

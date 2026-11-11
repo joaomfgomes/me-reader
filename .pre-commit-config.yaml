@@ -1,0 +1,28 @@
+# Verificações que correm sozinhas antes de cada "git commit".
+# Ativa-se com "make setup". Para correr tudo à mão:
+#   cd backend && uv run pre-commit run --all-files
+
+repos:
+  # Procura chaves e outros segredos no que vai ser commitado. Se encontrar
+  # algum, o commit é recusado antes de o segredo entrar no histórico.
+  # Na primeira execução o pre-commit descarrega o Go e compila o gitleaks,
+  # o que demora uns minutos; depois fica em cache.
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  # Hooks locais: usam o ruff já instalado pelo uv, na versão fixada no
+  # backend/uv.lock, para o pre-commit, o "make lint" e o CI darem o mesmo resultado.
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --project backend ruff check --force-exclude
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --project backend ruff format --check --force-exclude
+        language: system
+        types: [python]

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    // O Vite é que transforma o código; o TypeScript aqui só verifica tipos.
+    "noEmit": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client", "node"],
+    "skipLibCheck": true,
+
+    // Modo estrito: apanha mais erros antes de o código correr.
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true
+  },
+  "include": ["src", "vite.config.ts"]
+}
