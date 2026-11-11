@@ -7,10 +7,11 @@ from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.core.config import Settings
-from app.core.db import create_db_engine
+from app.core.db import create_db_engine, create_session_factory
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import HostValidationMiddleware, RequestContextMiddleware
+from app.storage.disk import DiskStorage
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -37,6 +38,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # As rotas chegam a eles através de request.app.state.
     app.state.settings = settings
     app.state.engine = engine
+    app.state.session_factory = create_session_factory(engine)
+    app.state.storage = DiskStorage(settings.data_dir / "files")
 
     register_error_handlers(app)
 

@@ -6,11 +6,30 @@ A arquitetura completa está em `docs/arquitetura.md` e as decisões em `docs/ad
 
 ## Fase em curso
 
-**Fase 0 concluída (2026-11-11). A seguinte é a Fase 1, importar e ler EPUB, que só começa com pedido explícito.** Atualiza esta secção no fim de cada fase.
+**Fase 1 em curso, dividida em três entregas.** Atualiza esta secção no fim de cada fase.
 
-O que existe: backend FastAPI com `GET /api/v1/health`, SQLite em modo WAL com uma migração inicial (tabela `app_meta`), validação do cabeçalho Host, erros em `problem+json`, logs JSON com identificador por pedido, e um frontend com uma página de estado. Os módulos `importing`, `audio`, `tutor`, `vocabulary`, `storage`, `providers` e `usage` estão vazios.
+1. Importação e modelo de dados: feita (2026-11-11).
+2. API: rotas `/documents`, posição de leitura e estado de processamento. Por fazer.
+3. Frontend: biblioteca e leitor. Por fazer.
 
-Adiado da Fase 0 para a Fase 1: a cópia automática da base de dados antes das migrações (prevista em `docs/arquitetura.md`), porque ainda não há dados para proteger.
+Cada entrega tem o seu plano e a sua aprovação; não avances para a seguinte sem pedido explícito.
+
+O que existe da Fase 0: backend FastAPI com `GET /api/v1/health`, SQLite em modo WAL, validação do cabeçalho Host, erros em `problem+json`, logs JSON com identificador por pedido, e um frontend com uma página de estado.
+
+O que existe da Fase 1:
+
+- `importing/`: `import_epub(session, storage, data)` em `service.py` valida o ficheiro, extrai o texto, deteta a língua, segmenta e grava. Ainda não há rota que o chame.
+- Tabelas `documents`, `chapters`, `blocks` e `sentences` (modelos em `importing/models.py`, migração `0002`). As posições de frases e palavras são índices no texto do bloco.
+- `storage/`: interface `FileStorage` e implementação `DiskStorage`, em `data/files/`.
+- `core/backup.py`: cópia da base de dados para `data/backups/` antes de migrações pendentes, guardando as últimas sete.
+
+Os módulos `audio`, `tutor`, `vocabulary`, `providers` e `usage` estão vazios.
+
+Por decidir ou por fazer mais tarde:
+
+- Os títulos dos capítulos ficam também como primeiro parágrafo do texto; o leitor (entrega 3) decide como os mostrar.
+- As palavras são separadas pela mesma regra nas cinco línguas. Em francês e italiano, "l'homme" conta como uma palavra; rever na Fase 3, quando se carregar em palavras.
+- A cópia diária da base de dados prevista na arquitetura não está feita; só a que antecede as migrações.
 
 Fases (detalhe em `docs/arquitetura.md`, secção "Plano, MVP e riscos"):
 
@@ -27,12 +46,12 @@ O MVP são as fases 0 a 3. Implementa uma fase de cada vez e não avances para a
 
 - **Backend:** Python 3.12, FastAPI, Pydantic, SQLAlchemy 2, Alembic, SQLite em modo WAL. Gestão com `uv`.
 - **Frontend:** React, Vite, TypeScript, TanStack Query, Tailwind. Gestão com `pnpm`.
-- **Texto:** EbookLib + BeautifulSoup (EPUB), pypdf ou pdfplumber (PDF), pySBD (frases), lingua (deteção de língua).
+- **Texto:** leitura direta do ZIP com `zipfile` + defusedxml + BeautifulSoup (EPUB), pypdf ou pdfplumber (PDF), pySBD (frases), lingua (deteção de língua).
 - **Voz:** Azure AI Speech, vozes Neural, com os tempos por palavra devolvidos pelo serviço.
 - **Tutor:** LLM de baixo custo, com saída JSON validada por Pydantic.
 - **Qualidade:** ruff, pytest, Vitest, gitleaks, GitHub Actions.
 
-Não uses PyMuPDF (licença AGPL). Não acrescentes Redis, filas, Docker, Postgres nem autenticação nesta fase.
+Não uses PyMuPDF nem EbookLib (licença AGPL); confirma a licença de qualquer dependência nova antes de a acrescentar. Não acrescentes Redis, filas, Docker, Postgres nem autenticação nesta fase.
 
 ## Estrutura prevista
 
@@ -55,7 +74,7 @@ frontend/
 docs/
   arquitetura.md
   adr/
-data/             base de dados, originais e áudio; fora do git
+data/             base de dados, files/ (originais e áudio), backups/ e logs/; fora do git
 ```
 
 ## Comandos
@@ -73,9 +92,10 @@ Comandos úteis fora do Makefile:
 
 - Um só teste do backend: `cd backend && uv run pytest tests/test_health.py -k nome`.
 - Nova migração: `cd backend && uv run alembic revision --autogenerate -m "descrição"`. Revê sempre o ficheiro gerado.
+- Confirmar que modelos e migrações coincidem: `cd backend && uv run alembic check`.
 - Todas as verificações de pre-commit: `cd backend && uv run pre-commit run --all-files`.
 
-Os testes do backend criam a aplicação com `create_app(settings)` e uma pasta de dados temporária (ver `backend/tests/conftest.py`). O `TestClient` tem de usar `base_url="http://localhost"`, senão a validação do Host rejeita os pedidos.
+Os testes do backend criam a aplicação com `create_app(settings)` e uma pasta de dados temporária (ver `backend/tests/conftest.py`). O `TestClient` tem de usar `base_url="http://localhost"`, senão a validação do Host rejeita os pedidos. EPUBs de teste estragados ou maliciosos geram-se com `tests/epub_factory.py`; o livro real está em `backend/tests/fixtures/`.
 
 ## Regras fixas
 

@@ -5,8 +5,12 @@ description = "Backend do Leitor de línguas"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "alembic>=1.20.1",
+    "beautifulsoup4>=4.15.0",
+    "defusedxml>=0.7.1",
     "fastapi>=0.162.4",
+    "lingua-language-detector>=2.2.0",
     "pydantic-settings>=2.16.2",
+    "pysbd>=0.3.4",
     "sqlalchemy>=2",
     "uvicorn[standard]>=0.54.0",
 ]
@@ -29,6 +33,11 @@ testpaths = ["tests"]
 # Põe a pasta backend/ no caminho de importação, para os testes poderem
 # fazer "from app... import ..." sem instalar o projeto como pacote.
 pythonpath = ["."]
+filterwarnings = [
+    # O pySBD tem expressões regulares escritas de forma antiga, que o Python
+    # 3.12 assinala ao carregar a biblioteca. Não é código nosso.
+    "ignore:invalid escape sequence:SyntaxWarning",
+]
 
 [tool.ruff]
 line-length = 100

@@ -7,9 +7,9 @@ from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import DateTime, Engine, String, Text, create_engine, event
+from sqlalchemy import DateTime, Engine, MetaData, String, Text, create_engine, event
 from sqlalchemy.engine import make_url
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from app.core.config import BACKEND_DIR
 
@@ -21,6 +21,20 @@ class Base(DeclarativeBase):
     subclasses. O Alembic usa esse registo para comparar o código com a base
     de dados quando gera uma migração.
     """
+
+    # Regra para dar nome a chaves e restrições (por exemplo
+    # "uq_chapters_document_id"). Sem nomes explícitos cada base de dados
+    # inventa os seus, e uma migração futura que precise de alterar uma
+    # restrição não saberia como a referir.
+    metadata = MetaData(
+        naming_convention={
+            "ix": "ix_%(column_0_label)s",
+            "uq": "uq_%(table_name)s_%(column_0_name)s",
+            "ck": "ck_%(table_name)s_%(constraint_name)s",
+            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+            "pk": "pk_%(table_name)s",
+        }
+    )
 
 
 class AppMeta(Base):
@@ -64,6 +78,18 @@ def create_db_engine(database_url: str) -> Engine:
             cursor.close()
 
     return engine
+
+
+def create_session_factory(engine: Engine) -> sessionmaker[Session]:
+    """Cria a fábrica de sessões.
+
+    Uma sessão é uma unidade de trabalho do ORM: junta as alterações feitas a
+    objetos Python e envia-as para a base de dados numa transação, no commit.
+    Abre-se uma por operação ("with session_factory() as session:").
+    """
+    # expire_on_commit=False deixa os objetos utilizáveis depois do commit sem
+    # obrigar a nova leitura da base de dados.
+    return sessionmaker(engine, expire_on_commit=False)
 
 
 def ensure_database_dir(database_url: str) -> None:

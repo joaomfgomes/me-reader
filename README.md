@@ -6,7 +6,7 @@ Corre só no teu Mac, como app web local, sem contas nem pagamentos.
 
 ## Estado
 
-**Fase 0 (esqueleto) concluída.** Backend e frontend arrancam, e a página inicial mostra o estado do sistema. Ainda não há importação de livros, áudio nem tutor; a Fase 1 traz a importação e leitura de EPUB.
+**Fase 1 (importar e ler EPUB) em curso.** O backend já sabe importar um EPUB: valida o ficheiro, extrai o texto, deteta a língua e divide-o em capítulos, blocos, frases e palavras. Ainda não há forma de o fazer pela aplicação: as rotas da API, a biblioteca e o leitor são as próximas entregas. A página inicial mostra apenas o estado do sistema.
 
 O plano completo está em [docs/arquitetura.md](docs/arquitetura.md) e as decisões em [docs/adr/](docs/adr/).
 
@@ -40,7 +40,7 @@ O `uv` instala sozinho o Python 3.12. O `make dev` aplica as migrações da base
 | `make test` | Corre os testes do backend (pytest) e do frontend (Vitest) |
 | `make lint` | Verifica o código com ruff e os tipos com TypeScript |
 | `make format` | Formata o código Python |
-| `make migrate` | Aplica as migrações em falta à base de dados |
+| `make migrate` | Copia a base de dados para `data/backups/` e aplica as migrações em falta |
 
 ## Configuração
 
@@ -57,11 +57,13 @@ A configuração vive no ficheiro `.env`, criado a partir do [.env.example](.env
 ```
 backend/app/core/        configuração, base de dados, logs, erros, middlewares
 backend/app/api/         rotas /api/v1
-backend/app/<módulo>/    importing, audio, tutor, vocabulary, storage, providers, usage (ainda vazios)
+backend/app/importing/   validação, extração, limpeza e segmentação de EPUB
+backend/app/storage/     interface de armazenamento de ficheiros (hoje disco)
+backend/app/<módulo>/    audio, tutor, vocabulary, providers, usage (ainda vazios)
 backend/migrations/      migrações Alembic
 backend/tests/           testes do backend
 frontend/src/            aplicação React
-data/                    base de dados, ficheiros e logs; fora do git
+data/                    base de dados, ficheiros, cópias de segurança e logs; fora do git
 ```
 
 Com a app a correr, a documentação interativa da API está em <http://127.0.0.1:8000/docs>.

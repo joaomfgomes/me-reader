@@ -282,7 +282,7 @@ A stack é Python no backend e TypeScript no frontend, com bibliotecas maduras e
 | --- | --- | --- | --- |
 | Backend | Python 3.12, FastAPI, Pydantic | Node + Fastify | Melhor ecossistema para texto, PDF e LLM; útil para o teu percurso em IA |
 | Dados | SQLite, SQLAlchemy 2, Alembic | Postgres | Sem serviços a correr; migração futura preparada |
-| EPUB | EbookLib + BeautifulSoup | Leitura direta do ZIP | EPUB é HTML dentro de um ZIP; estas bibliotecas tratam do essencial |
+| EPUB | Leitura direta do ZIP (`zipfile`, defusedxml) + BeautifulSoup | EbookLib | EPUB é HTML dentro de um ZIP. A EbookLib tem licença AGPL, tal como o PyMuPDF; ler o ZIP diretamente dá ainda controlo total sobre os limites de segurança |
 | PDF | pypdf ou pdfplumber | PyMuPDF | PyMuPDF extrai melhor, mas tem licença AGPL, o que pesa num repositório público e numa futura app web |
 | Frases e língua | pySBD para frases, lingua para deteção | spaCy | Leves e suficientes para as cinco línguas; spaCy só se precisares de análise gramatical local |
 | Voz | SDK do Azure AI Speech | Kokoro local | Tempos por palavra nas cinco línguas |
