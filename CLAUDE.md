@@ -6,9 +6,13 @@ A arquitetura completa está em `docs/arquitetura.md` e as decisões em `docs/ad
 
 ## Fase em curso
 
-**Fase 1 concluída (2026-11-11). A seguinte é a Fase 2, áudio com destaque palavra a palavra, que só começa com pedido explícito.** Atualiza esta secção no fim de cada fase.
+**Fase 2 em curso, dividida em três entregas.** Atualiza esta secção no fim de cada fase.
 
-Antes da Fase 2 é preciso: aprovar o ADR-003 e o ADR-004, e confirmar que existe o recurso Azure AI Speech no escalão gratuito F0.
+1. Áudio no backend com fornecedor simulado: feita (2026-11-11).
+2. Fornecedor Azure em `providers/`, com os tempos mapeados pelos offsets de texto. Por fazer; precisa do recurso Azure AI Speech (escalão F0) e da chave no `.env`.
+3. Frontend: leitor de áudio, destaque palavra a palavra, velocidade, confirmação de documentos privados e página "Custos". Por fazer.
+
+Cada entrega tem o seu plano e a sua aprovação; não avances para a seguinte sem pedido explícito.
 
 O que existe da Fase 0: backend FastAPI com `GET /api/v1/health`, SQLite em modo WAL, validação do cabeçalho Host, erros em `problem+json`, logs JSON com identificador por pedido, e um frontend com uma página de estado.
 
@@ -25,13 +29,26 @@ O que existe da Fase 1:
 - `storage/`: interface `FileStorage` e implementação `DiskStorage`, em `data/files/`.
 - `core/backup.py`: cópia da base de dados para `data/backups/` antes de migrações pendentes, guardando as últimas sete.
 
-Os módulos `audio`, `tutor`, `vocabulary`, `providers` e `usage` estão vazios.
+O que existe da Fase 2:
+
+- `audio/voice.py`: a interface `SpeechSynthesizer`. Os tempos das palavras vêm por posição no texto enviado (`WordTiming`), nunca por ordem.
+- `providers/fake_speech.py`: fornecedor simulado, escolhido com `READER_SPEECH_PROVIDER=fake` (o valor por omissão). Gera um bip por palavra. `create_speech_synthesizer` em `providers/__init__.py` escolhe a implementação.
+- `audio/service.py`: `get_block_audio` devolve o áudio da cache ou sintetiza. A chave é `audio_cache_key(texto do bloco, voz, versão da limpeza do documento)`. Um cadeado por chave evita sínteses duplicadas.
+- `audio/alignment.py`: liga os tempos do fornecedor às nossas palavras por sobreposição de posições.
+- Tabelas `audio_assets` (por hash), `block_audio` (que blocos usam que áudio) e `usage_events` (migração `0004`).
+- `usage/service.py`: registo de consumo e teto mensal (`READER_MONTHLY_TTS_CHAR_LIMIT`).
+- `api/audio.py`: `POST /blocks/{id}/audio`, `GET /audio/{hash}` (com pedidos parciais), `POST /documents/{id}/audio/estimate` e `GET /usage`.
+- Documentos privados: gerar áudio novo exige `confirm_private: true` no pedido; o que está em cache toca sem confirmação.
+
+Os módulos `tutor` e `vocabulary` estão vazios.
 
 Convenções a manter:
 
 - Colunas de data usam `UtcDateTime` (em `core/db.py`), nunca `DateTime` diretamente: o SQLite devolve datas sem fuso e a API tem de as mostrar sempre em UTC.
 - As rotas são `def` (não `async def`) e recebem a sessão e o armazenamento por `SessionDep` e `StorageDep` (em `api/deps.py`).
 - Erros de negócio lançam `ProblemError` com um `code` estável.
+- Migrações geradas com `--autogenerate` não podem referir código de `app/`. O `render_item` em `migrations/env.py` trata do `UtcDateTime`; confirma sempre o ficheiro gerado.
+- Os testes de áudio trocam `app.state.speech` por um simulador que regista as chamadas (ver `tests/test_audio.py`).
 
 Por decidir ou por fazer mais tarde:
 
@@ -42,6 +59,8 @@ Por decidir ou por fazer mais tarde:
 - As palavras ainda não têm elementos próprios no leitor; passam a ter na Fase 2, para o destaque.
 - As palavras são separadas pela mesma regra nas cinco línguas. Em francês e italiano, "l'homme" conta como uma palavra; rever na Fase 3, quando se carregar em palavras.
 - A cópia diária da base de dados prevista na arquitetura não está feita; só a que antecede as migrações.
+- A pré-geração de um capítulo inteiro em fundo não está feita; o áudio é gerado bloco a bloco, a pedido.
+- O preço por carácter (`READER_TTS_USD_PER_MILLION_CHARS`, 16 USD) não foi confirmado na página oficial do Azure.
 
 Fases (detalhe em `docs/arquitetura.md`, secção "Plano, MVP e riscos"):
 
@@ -137,4 +156,4 @@ Os testes do frontend usam `mockApi` e `renderPage` de `frontend/src/test/helper
 
 - Fornecedor de LLM a usar primeiro (decidir antes da Fase 3).
 - Recurso Azure AI Speech no escalão gratuito F0: confirmar que existe antes da Fase 2.
-- ADR-001 e ADR-002 foram aceites a 2026-11-11. Os ADR-003, 004 e 005 continuam com estado "proposta" até o autor os aprovar (antes das Fases 2 e 3).
+- Os ADR-001 a 004 foram aceites a 2026-11-11. O ADR-005 (LLM) continua com estado "proposta" até o autor o aprovar, antes da Fase 3.

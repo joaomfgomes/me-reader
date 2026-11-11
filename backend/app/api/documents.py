@@ -20,6 +20,7 @@ from app.api.schemas import (
     PositionUpdate,
     ReadingPositionOut,
 )
+from app.audio.service import audio_asset_ids_of_document, delete_unused_audio
 from app.core.errors import ProblemError
 from app.importing import validation
 from app.importing.language import SUPPORTED_LANGUAGES
@@ -167,9 +168,12 @@ def update_document(
 
 @router.delete("/{document_id}", status_code=204)
 def delete_document(document_id: int, session: SessionDep, storage: StorageDep) -> None:
-    """Apaga o documento, os seus capítulos e o ficheiro original."""
+    """Apaga o documento, os seus capítulos, o ficheiro original e o áudio só dele."""
     document = _get_document(session, document_id)
     storage_key = document.storage_key
+    # Tem de ser lido antes de apagar: as ligações entre blocos e áudio
+    # desaparecem com o documento.
+    audio_asset_ids = audio_asset_ids_of_document(session, document_id)
 
     session.delete(document)
     session.commit()
@@ -177,6 +181,7 @@ def delete_document(document_id: int, session: SessionDep, storage: StorageDep) 
     # passos sobra um ficheiro sem dono, que é inofensivo; a ordem inversa
     # podia deixar um documento listado sem o seu original.
     storage.delete(storage_key)
+    delete_unused_audio(session, storage, audio_asset_ids)
 
 
 @router.get("/{document_id}/chapters/{position}", response_model=ChapterDetail)

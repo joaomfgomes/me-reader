@@ -96,3 +96,73 @@ class PositionUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     sentence_id: int
+
+
+# --- Áudio e consumo --------------------------------------------------------
+
+
+class AudioRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # Tem de vir a True para gerar áudio novo de um documento privado: é a
+    # confirmação de que o texto pode ser enviado ao serviço de voz.
+    confirm_private: bool = False
+
+
+class TimedWordOut(ApiModel):
+    # Posição da palavra no texto do bloco.
+    start: int
+    end: int
+    # Quando é dita, em milissegundos desde o início do áudio. None se o
+    # serviço de voz não devolveu tempo para esta palavra.
+    start_ms: int | None
+    end_ms: int | None
+
+
+class BlockAudioOut(BaseModel):
+    block_id: int
+    audio_url: str
+    media_type: str
+    duration_ms: int
+    voice: str
+    # True se o áudio veio da cache, sem custo.
+    cached: bool
+    words: list[TimedWordOut]
+
+
+class EstimateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # Sem capítulo, a estimativa é para o documento inteiro.
+    chapter_position: int | None = None
+
+
+class AudioEstimateOut(ApiModel):
+    blocks_total: int
+    blocks_cached: int
+    characters_total: int
+    characters_cached: int
+    characters_to_synthesize: int
+    # Estimativa com o preço configurado; não é um valor faturado.
+    estimated_cost_usd: float
+    characters_used_this_month: int
+    monthly_character_limit: int
+    exceeds_monthly_limit: bool
+
+
+class TtsUsageOut(ApiModel):
+    requests: int
+    cache_hits: int
+    # Entre 0 e 1; None se ainda não houve pedidos este mês.
+    cache_hit_rate: float | None
+    characters_synthesized: int
+    characters_from_cache: int
+    estimated_cost_usd: float
+    monthly_character_limit: int
+    characters_remaining: int
+
+
+class UsageOut(BaseModel):
+    # Mês a que os números dizem respeito, no formato "2026-11" (UTC).
+    month: str
+    tts: TtsUsageOut

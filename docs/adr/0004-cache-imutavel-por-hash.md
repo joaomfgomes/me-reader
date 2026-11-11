@@ -1,6 +1,6 @@
 # ADR-004: Cache imutável por hash de conteúdo
 
-- **Estado:** proposta
+- **Estado:** aceite (2026-11-11)
 - **Data:** 2026-11-11
 
 ## Contexto

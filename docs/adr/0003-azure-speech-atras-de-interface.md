@@ -1,6 +1,6 @@
 # ADR-003: Azure AI Speech atrás de uma interface de voz
 
-- **Estado:** proposta
+- **Estado:** aceite (2026-11-11)
 - **Data:** 2026-11-11
 
 ## Contexto

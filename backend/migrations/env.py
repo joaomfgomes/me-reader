@@ -3,14 +3,15 @@
 from alembic import context
 from alembic.runtime.migration import MigrationContext
 
-from app.core.backup import backup_database
-from app.core.config import Settings
-from app.core.db import Base, create_db_engine, ensure_database_dir
-
 # Importar os modelos regista as tabelas em Base.metadata. Sem este import o
 # Alembic não as veria. O "noqa" diz ao ruff que o import parece não ser usado,
 # mas é intencional.
-from app.importing import models  # noqa: F401
+import app.audio.models  # noqa: F401
+import app.importing.models  # noqa: F401
+import app.usage.models  # noqa: F401
+from app.core.backup import backup_database
+from app.core.config import Settings
+from app.core.db import Base, UtcDateTime, create_db_engine, ensure_database_dir
 
 config = context.config
 
@@ -21,6 +22,19 @@ target_metadata = Base.metadata
 # Os testes passam o URL de uma base de dados temporária pela configuração.
 # Na linha de comandos não vem nenhum, e usamos o da aplicação.
 database_url = config.get_main_option("sqlalchemy.url") or Settings().database_url
+
+
+def render_item(type_: str, obj: object, autogen_context: object) -> str | bool:
+    """Diz ao Alembic como escrever certos tipos nas migrações que gera.
+
+    Sem isto, uma coluna UtcDateTime apareceria como "app.core.db.UtcDateTime()",
+    e a migração passaria a depender do código da aplicação. Uma migração deve
+    usar só tipos do SQLAlchemy, para continuar a funcionar se o código mudar.
+    """
+    if type_ == "type" and isinstance(obj, UtcDateTime):
+        return "sa.DateTime(timezone=True)"
+    # False: usar a forma normal para tudo o resto.
+    return False
 
 
 def run_migrations() -> None:
@@ -41,6 +55,7 @@ def run_migrations() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            render_item=render_item,
             # O SQLite quase não suporta ALTER TABLE. Em "batch mode" o Alembic
             # contorna isso recriando a tabela; noutras bases de dados não muda nada.
             render_as_batch=True,

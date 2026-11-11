@@ -6,7 +6,7 @@ Corre só no teu Mac, como app web local, sem contas nem pagamentos.
 
 ## Estado
 
-**Fase 1 (importar e ler EPUB) concluída.** Já podes importar um EPUB, vê-lo na biblioteca e lê-lo, com modo escuro, tamanho de letra ajustável e a posição de leitura guardada. Nada sai do teu computador: ainda não há áudio nem tutor, que chegam nas Fases 2 e 3.
+**Fase 2 (áudio com destaque) em curso.** A Fase 1 está concluída: importas um EPUB, vê-lo na biblioteca e lê-lo, com modo escuro, tamanho de letra ajustável e a posição de leitura guardada. Da Fase 2 existe o lado do servidor (cache de áudio, estimativa de custo, teto mensal e registo de consumo), a funcionar com uma voz simulada que não faz chamadas externas. Ainda não se ouve nada na aplicação: faltam a ligação ao Azure AI Speech e o leitor de áudio.
 
 O plano completo está em [docs/arquitetura.md](docs/arquitetura.md) e as decisões em [docs/adr/](docs/adr/).
 
@@ -52,6 +52,9 @@ A configuração vive no ficheiro `.env`, criado a partir do [.env.example](.env
 | `READER_DATA_DIR` | `./data` | Pasta da base de dados, dos originais, do áudio e dos logs |
 | `READER_PORT` | `8000` | Porta do backend |
 | `READER_LOG_LEVEL` | `INFO` | Nível de detalhe dos logs |
+| `READER_SPEECH_PROVIDER` | `fake` | Fornecedor de voz. `fake` é simulado e não tem custos |
+| `READER_MONTHLY_TTS_CHAR_LIMIT` | `500000` | Teto mensal de caracteres enviados ao serviço de voz |
+| `READER_TTS_USD_PER_MILLION_CHARS` | `16` | Preço usado para estimar custos |
 
 ## Onde está cada coisa
 
@@ -60,7 +63,10 @@ backend/app/core/        configuração, base de dados, logs, erros, middlewares
 backend/app/api/         rotas /api/v1
 backend/app/importing/   validação, extração, limpeza e segmentação de EPUB
 backend/app/storage/     interface de armazenamento de ficheiros (hoje disco)
-backend/app/<módulo>/    audio, tutor, vocabulary, providers, usage (ainda vazios)
+backend/app/audio/       cache de áudio, alinhamento de tempos e estimativa de custo
+backend/app/providers/   fornecedores externos (por agora, só a voz simulada)
+backend/app/usage/       registo de consumo e teto mensal
+backend/app/<módulo>/    tutor, vocabulary (ainda vazios)
 backend/migrations/      migrações Alembic
 backend/tests/           testes do backend
 frontend/src/pages/      biblioteca e leitor

@@ -1,6 +1,7 @@
 """Configuração da aplicação, lida de variáveis de ambiente e do ficheiro .env."""
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -37,6 +38,15 @@ class Settings(BaseSettings):
     data_dir: Path = REPO_ROOT / "data"
     port: int = 8000
     log_level: str = "INFO"
+
+    # Fornecedor de voz. "fake" não faz chamadas externas nem gasta quota.
+    speech_provider: Literal["fake", "azure"] = "fake"
+    # Teto de caracteres sintetizados por mês. O valor por omissão é o
+    # escalão gratuito do Azure AI Speech.
+    monthly_tts_char_limit: int = 500_000
+    # Preço usado só para estimar custos. Não foi confirmado na página oficial
+    # do Azure; confirma-o antes de saíres do escalão gratuito.
+    tts_usd_per_million_chars: float = 16.0
 
     @field_validator("data_dir")
     @classmethod
