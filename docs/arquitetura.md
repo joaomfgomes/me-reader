@@ -288,7 +288,7 @@ A stack é Python no backend e TypeScript no frontend, com bibliotecas maduras e
 | Voz | SDK do Azure AI Speech | Kokoro local | Tempos por palavra nas cinco línguas |
 | Tutor | SDK do fornecedor escolhido, atrás de interface | Ollama local | Saída JSON validada com Pydantic |
 | Revisão | Algoritmo SM-2 escrito à mão | FSRS (biblioteca) | SM-2 cabe em 30 linhas e percebe-se; FSRS é melhor, mas é uma caixa preta |
-| Frontend | React, Vite, TypeScript, TanStack Query, Tailwind | Svelte | O mais documentado; modo escuro e tamanho de letra são triviais |
+| Frontend | React, Vite, TypeScript, React Router, TanStack Query, Tailwind | Svelte | O mais documentado; modo escuro e tamanho de letra são triviais |
 | Áudio no browser | Elemento de áudio nativo | Web Audio API | Velocidade e posição já vêm incluídas |
 | Qualidade | ruff, pytest, Vitest, gitleaks, GitHub Actions | Sem alternativa relevante | Rápidos e sem configuração pesada |
 | Ferramentas | uv para Python, pnpm para o frontend | pip e npm | Instalação reprodutível com um comando |

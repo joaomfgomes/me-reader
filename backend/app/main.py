@@ -12,6 +12,7 @@ from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import (
     BodySizeLimitMiddleware,
+    CrossSiteRequestMiddleware,
     HostValidationMiddleware,
     RequestContextMiddleware,
 )
@@ -61,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         BodySizeLimitMiddleware,
         max_bytes=lambda: validation.MAX_FILE_BYTES + MULTIPART_OVERHEAD_BYTES,
     )
+    app.add_middleware(CrossSiteRequestMiddleware)
     app.add_middleware(HostValidationMiddleware)
     app.add_middleware(RequestContextMiddleware)
 

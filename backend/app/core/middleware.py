@@ -11,6 +11,7 @@ import time
 import traceback
 import uuid
 from collections.abc import Callable
+from urllib.parse import urlsplit
 
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.exceptions import HTTPException
@@ -53,6 +54,45 @@ class HostValidationMiddleware:
                 "invalid_host",
                 "Cabeçalho Host inválido",
                 "Esta aplicação só aceita pedidos feitos a localhost ou 127.0.0.1.",
+            )
+            await response(scope, receive, send)
+            return
+
+        await self.app(scope, receive, send)
+
+
+# Métodos que só leem. Todos os outros alteram dados.
+_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+
+class CrossSiteRequestMiddleware:
+    """Recusa pedidos de escrita feitos por páginas de outros sites (CSRF).
+
+    Sem CORS, o browser não deixa outro site *ler* as nossas respostas, mas
+    deixa-o *enviar* certos pedidos, como um formulário com um ficheiro. Uma
+    página maliciosa aberta noutro separador podia assim importar documentos
+    para a biblioteca sem o utilizador dar por isso. Nesses pedidos o browser
+    envia sempre o cabeçalho Origin com o endereço da página que os fez, e é
+    por ele que os distinguimos.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope["method"] in _SAFE_METHODS:
+            await self.app(scope, receive, send)
+            return
+
+        # Sem Origin, o pedido não vem de uma página web (é o curl, por
+        # exemplo) e não há terceiro a aproveitar-se do browser do utilizador.
+        origin = Headers(scope=scope).get("origin")
+        if origin is not None and urlsplit(origin).hostname not in ALLOWED_HOSTNAMES:
+            response = problem_response(
+                403,
+                "cross_site_request",
+                "Pedido de outro site recusado",
+                "Esta aplicação só aceita alterações feitas a partir da sua própria página.",
             )
             await response(scope, receive, send)
             return

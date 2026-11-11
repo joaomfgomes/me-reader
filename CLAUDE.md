@@ -6,13 +6,9 @@ A arquitetura completa está em `docs/arquitetura.md` e as decisões em `docs/ad
 
 ## Fase em curso
 
-**Fase 1 em curso, dividida em três entregas.** Atualiza esta secção no fim de cada fase.
+**Fase 1 concluída (2026-11-11). A seguinte é a Fase 2, áudio com destaque palavra a palavra, que só começa com pedido explícito.** Atualiza esta secção no fim de cada fase.
 
-1. Importação e modelo de dados: feita (2026-11-11).
-2. API: rotas `/documents` e posição de leitura. Feita (2026-11-11).
-3. Frontend: biblioteca e leitor. Por fazer.
-
-Cada entrega tem o seu plano e a sua aprovação; não avances para a seguinte sem pedido explícito.
+Antes da Fase 2 é preciso: aprovar o ADR-003 e o ADR-004, e confirmar que existe o recurso Azure AI Speech no escalão gratuito F0.
 
 O que existe da Fase 0: backend FastAPI com `GET /api/v1/health`, SQLite em modo WAL, validação do cabeçalho Host, erros em `problem+json`, logs JSON com identificador por pedido, e um frontend com uma página de estado.
 
@@ -22,6 +18,9 @@ O que existe da Fase 1:
 - `api/documents.py`: `POST /documents` (upload multipart, campo `file`), `GET /documents` (cursor), `GET`/`PATCH`/`DELETE /documents/{id}`, `GET /documents/{id}/chapters/{position}` (posição a começar em 0) e `PUT /documents/{id}/position`. As formas dos pedidos e respostas estão em `api/schemas.py`.
 - Tabela `reading_positions` (migração `0003`), uma linha por documento.
 - `BodySizeLimitMiddleware` corta pedidos acima do limite de upload sem os ler até ao fim.
+- `CrossSiteRequestMiddleware` recusa pedidos de escrita cujo cabeçalho `Origin` não seja local (proteção contra CSRF; sem `Origin`, como no curl, passam).
+- Frontend: biblioteca em `/` (`pages/LibraryPage.tsx`) e leitor em `/documents/:id` (`pages/ReaderPage.tsx`), com React Router. O capítulo aberto vai no endereço (`?c=3`). Cada frase é um `<span data-sentence-id>`; a posição guardada é a primeira frase visível.
+- Preferências (tema e tamanho de letra) em `localStorage`, por `lib/preferences.tsx`. As cores são variáveis CSS em `index.css`, trocadas pelo atributo `data-theme`; usa as classes `bg-paper`, `text-ink`, `text-pen`, etc., e não cores soltas. O amarelo `marker` está reservado para a frase em curso.
 - Tabelas `documents`, `chapters`, `blocks` e `sentences` (modelos em `importing/models.py`, migração `0002`). As posições de frases e palavras são índices no texto do bloco.
 - `storage/`: interface `FileStorage` e implementação `DiskStorage`, em `data/files/`.
 - `core/backup.py`: cópia da base de dados para `data/backups/` antes de migrações pendentes, guardando as últimas sete.
@@ -39,7 +38,8 @@ Por decidir ou por fazer mais tarde:
 - A importação é síncrona e a resposta traz `status: "ready"`. Não há tabela de jobs; rever se a importação de PDF (Fase 5) for lenta.
 - Mudar a língua de um documento não volta a dividir as frases.
 
-- Os títulos dos capítulos ficam também como primeiro parágrafo do texto; o leitor (entrega 3) decide como os mostrar.
+- Os títulos dos capítulos ficam também como primeiro parágrafo do texto. O leitor mostra esse parágrafo como cabeçalho quando é igual ao título.
+- As palavras ainda não têm elementos próprios no leitor; passam a ter na Fase 2, para o destaque.
 - As palavras são separadas pela mesma regra nas cinco línguas. Em francês e italiano, "l'homme" conta como uma palavra; rever na Fase 3, quando se carregar em palavras.
 - A cópia diária da base de dados prevista na arquitetura não está feita; só a que antecede as migrações.
 
@@ -57,7 +57,7 @@ O MVP são as fases 0 a 3. Implementa uma fase de cada vez e não avances para a
 ## Stack
 
 - **Backend:** Python 3.12, FastAPI, Pydantic, SQLAlchemy 2, Alembic, SQLite em modo WAL. Gestão com `uv`.
-- **Frontend:** React, Vite, TypeScript, TanStack Query, Tailwind. Gestão com `pnpm`.
+- **Frontend:** React, Vite, TypeScript, React Router, TanStack Query, Tailwind. Gestão com `pnpm`.
 - **Texto:** leitura direta do ZIP com `zipfile` + defusedxml + BeautifulSoup (EPUB), pypdf ou pdfplumber (PDF), pySBD (frases), lingua (deteção de língua).
 - **Voz:** Azure AI Speech, vozes Neural, com os tempos por palavra devolvidos pelo serviço.
 - **Tutor:** LLM de baixo custo, com saída JSON validada por Pydantic.
@@ -108,6 +108,8 @@ Comandos úteis fora do Makefile:
 - Todas as verificações de pre-commit: `cd backend && uv run pre-commit run --all-files`.
 
 Os testes do backend criam a aplicação com `create_app(settings)` e uma pasta de dados temporária (ver `backend/tests/conftest.py`). O `TestClient` tem de usar `base_url="http://localhost"`, senão a validação do Host rejeita os pedidos. EPUBs de teste estragados ou maliciosos geram-se com `tests/epub_factory.py`; o livro real está em `backend/tests/fixtures/`.
+
+Os testes do frontend usam `mockApi` e `renderPage` de `frontend/src/test/helpers.tsx`: o primeiro finge o backend, o segundo desenha uma página com cache, preferências e navegação.
 
 ## Regras fixas
 

@@ -6,13 +6,7 @@ Corre só no teu Mac, como app web local, sem contas nem pagamentos.
 
 ## Estado
 
-**Fase 1 (importar e ler EPUB) em curso.** O backend já sabe importar um EPUB: valida o ficheiro, extrai o texto, deteta a língua e divide-o em capítulos, blocos, frases e palavras. A API de documentos também já existe (importar, listar, ler capítulos, corrigir, apagar e guardar a posição de leitura). Falta a parte visível: a biblioteca e o leitor são a próxima entrega, e por agora a página inicial mostra apenas o estado do sistema.
-
-Enquanto não há interface, podes importar um livro pela linha de comandos, com a app a correr:
-
-```bash
-curl -F "file=@backend/tests/fixtures/pg11-alice.epub" http://127.0.0.1:8000/api/v1/documents
-```
+**Fase 1 (importar e ler EPUB) concluída.** Já podes importar um EPUB, vê-lo na biblioteca e lê-lo, com modo escuro, tamanho de letra ajustável e a posição de leitura guardada. Nada sai do teu computador: ainda não há áudio nem tutor, que chegam nas Fases 2 e 3.
 
 O plano completo está em [docs/arquitetura.md](docs/arquitetura.md) e as decisões em [docs/adr/](docs/adr/).
 
@@ -33,7 +27,8 @@ Precisas de macOS com [Homebrew](https://brew.sh), git e Node.js 24 ou superior.
    ```bash
    make dev
    ```
-5. Abre <http://127.0.0.1:5173> no browser. Deves ver "Sistema saudável".
+5. Abre <http://127.0.0.1:5173> no browser. Deves ver a biblioteca vazia e, no rodapé, "Sistema saudável".
+6. Carrega em "Importar EPUB" e escolhe um livro. Para experimentar, há um em `backend/tests/fixtures/pg11-alice.epub`.
 
 O `uv` instala sozinho o Python 3.12. O `make dev` aplica as migrações da base de dados antes de arrancar, e `Ctrl+C` pára os dois servidores.
 
@@ -68,7 +63,9 @@ backend/app/storage/     interface de armazenamento de ficheiros (hoje disco)
 backend/app/<módulo>/    audio, tutor, vocabulary, providers, usage (ainda vazios)
 backend/migrations/      migrações Alembic
 backend/tests/           testes do backend
-frontend/src/            aplicação React
+frontend/src/pages/      biblioteca e leitor
+frontend/src/api/        chamadas ao backend
+frontend/src/lib/        preferências e textos da interface
 data/                    base de dados, ficheiros, cópias de segurança e logs; fora do git
 ```
 
@@ -78,6 +75,8 @@ Com a app a correr, a documentação interativa da API está em <http://127.0.0.
 
 - O servidor escuta apenas em `127.0.0.1` e rejeita pedidos cujo cabeçalho `Host` não seja `localhost` ou `127.0.0.1`.
 - Não há CORS aberto: o frontend chega ao backend pelo proxy do Vite.
+- Pedidos que alteram dados são recusados se vierem de uma página de outro site (cabeçalho `Origin`).
+- Os ficheiros importados são validados antes de serem lidos: tamanho, tipo pelo conteúdo e estrutura do ZIP. O HTML dos livros nunca é mostrado; a app extrai só o texto.
 - O gitleaks corre antes de cada commit e no GitHub Actions, para nenhuma chave entrar no repositório.
 - Os logs (em `data/logs/app.log`) levam identificadores e durações, nunca chaves nem texto dos documentos.
 

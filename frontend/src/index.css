@@ -1,2 +1,87 @@
 /* O Tailwind 4 configura-se aqui no CSS; já não há tailwind.config.js. */
 @import "tailwindcss";
+
+/*
+ * Cores e letras da aplicação.
+ *
+ * A ideia visual é a de um livro anotado: papel frio, tinta escura, azul de
+ * esferográfica para tudo o que se pode clicar, e amarelo de marcador
+ * fluorescente reservado para uma única coisa, a frase onde o leitor está.
+ *
+ * Cada cor é uma variável CSS. O modo escuro só troca os valores das
+ * variáveis, por isso os componentes não precisam de saber em que modo estão.
+ */
+:root {
+  --paper: #f5f6f3;
+  --sheet: #ffffff;
+  --ink: #1b2230;
+  --pencil: #5d6675;
+  --rule: #d6dad4;
+  --pen: #2743b5;
+  --marker: #ffe566;
+  --marker-ink: #1b2230;
+  --danger: #b3261e;
+  --ok: #1f7a4d;
+}
+
+:root[data-theme="dark"] {
+  --paper: #171b22;
+  --sheet: #1f242d;
+  --ink: #e3e5e1;
+  --pencil: #9aa3b0;
+  --rule: #343b47;
+  --pen: #93a8ff;
+  --marker: #f2d84b;
+  --marker-ink: #171b22;
+  --danger: #ff8a80;
+  --ok: #6fd3a0;
+}
+
+/* @theme liga as variáveis ao Tailwind: passa a haver classes como bg-paper,
+   text-ink, border-rule ou font-book. */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-ink: var(--ink);
+  --color-pencil: var(--pencil);
+  --color-rule: var(--rule);
+  --color-pen: var(--pen);
+  --color-marker: var(--marker);
+  --color-marker-ink: var(--marker-ink);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+
+  /* Letras do próprio sistema, sem descarregar nada da internet: a app
+     funciona sem rede e o browser não faz pedidos a terceiros. */
+  --font-book: "Iowan Old Style", Charter, "Palatino Linotype", ui-serif, Georgia, serif;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", sans-serif;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  /* Diz ao browser que cores usar em barras de deslocamento e campos nativos. */
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Contorno de foco bem visível para quem navega com o teclado. */
+:focus-visible {
+  outline: 2px solid var(--pen);
+  outline-offset: 2px;
+}
+
+/* A frase onde o leitor parou, passada a marcador. box-decoration-break faz o
+   fundo acompanhar bem as quebras de linha. */
+.marked {
+  background: var(--marker);
+  color: var(--marker-ink);
+  border-radius: 2px;
+  padding: 0.1em 0;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
