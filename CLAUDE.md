@@ -103,4 +103,4 @@ Os testes do backend criam a aplicação com `create_app(settings)` e uma pasta 
 
 - Fornecedor de LLM a usar primeiro (decidir antes da Fase 3).
 - Recurso Azure AI Speech no escalão gratuito F0: confirmar que existe antes da Fase 2.
-- Os ADRs estão com estado "proposta" até o autor os aprovar.
+- ADR-001 e ADR-002 foram aceites a 2026-11-11. Os ADR-003, 004 e 005 continuam com estado "proposta" até o autor os aprovar (antes das Fases 2 e 3).

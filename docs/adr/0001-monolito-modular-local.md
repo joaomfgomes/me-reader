@@ -1,6 +1,6 @@
 # ADR-001: Monólito modular local
 
-- **Estado:** proposta
+- **Estado:** aceite (2026-11-11)
 - **Data:** 2026-11-11
 
 ## Contexto

@@ -1,6 +1,6 @@
 # ADR-002: SQLite e ficheiros em disco, com caminho para Postgres
 
-- **Estado:** proposta
+- **Estado:** aceite (2026-11-11)
 - **Data:** 2026-11-11
 
 ## Contexto
