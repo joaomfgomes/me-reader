@@ -194,10 +194,11 @@ test("a posição guardada passa a ser a frase que está a ser dita", async () =
   );
 });
 
-test("clicar numa frase toca a partir dela", async () => {
-  await renderReader();
+test("o painel de uma palavra permite tocar a partir da frase dela", async () => {
+  await renderReader({ "POST /tutor/word": { status: 502, body: { code: "tutor_provider_error" } } });
 
   await userEvent.click(screen.getByText("warm"));
+  await userEvent.click(screen.getByRole("button", { name: "Ouvir a partir desta frase" }));
 
   await screen.findByRole("button", { name: "Pausar" });
   // A segunda frase começa aos 2 segundos do áudio do bloco.
@@ -228,9 +229,12 @@ test("os botões saltam entre frases, mudando de bloco quando é preciso", async
 
 test("repetir volta ao início da frase em curso", async () => {
   await renderReader();
-  await userEvent.click(screen.getByText("warm"));
+  await userEvent.click(screen.getByRole("button", { name: "Ouvir" }));
   await screen.findByRole("button", { name: "Pausar" });
   moveAudioTo(3.2);
+  await waitFor(() =>
+    expect(document.querySelector('[data-sentence-id="12"]')).toHaveClass("sentence-now"),
+  );
 
   await userEvent.click(screen.getByRole("button", { name: "Repetir frase" }));
 

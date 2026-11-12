@@ -11,8 +11,9 @@ import {
 } from "../api/documents";
 import { errorMessage } from "../lib/messages";
 import { FONT_SIZE_MAX, FONT_SIZE_MIN, FONT_SIZE_STEP, usePreferences } from "../lib/preferences";
-import { ChapterText, HEADER_OFFSET_PX } from "../reader/ChapterText";
+import { ChapterText, HEADER_OFFSET_PX, type SelectedWord } from "../reader/ChapterText";
 import { PlayerBar } from "../reader/PlayerBar";
+import { TutorPanel } from "../reader/TutorPanel";
 import { useAudioPlayer } from "../reader/useAudioPlayer";
 
 // Tempo de espera depois do último movimento antes de guardar a posição.
@@ -124,6 +125,32 @@ export function ReaderPage() {
   // de ser registado outra vez sempre que o estado do áudio muda.
   const audioActiveRef = useRef(audioActive);
   audioActiveRef.current = audioActive;
+
+  // A palavra cuja explicação está aberta no painel do tutor.
+  const [selectedWord, setSelectedWord] = useState<SelectedWord | null>(null);
+  const pauseAudio = player.pause;
+  const handleWordClick = useCallback(
+    (word: SelectedWord) => {
+      // Quem pára para ver uma palavra não quer o áudio a fugir-lhe.
+      pauseAudio();
+      setSelectedWord(word);
+    },
+    [pauseAudio],
+  );
+
+  // Ao mudar de capítulo, a palavra escolhida deixa de estar no ecrã.
+  useEffect(() => setSelectedWord(null), [chapterPosition]);
+
+  // Sublinha a palavra escolhida. É feito diretamente no elemento, como o
+  // destaque do áudio, para não redesenhar o capítulo por causa de uma palavra.
+  useEffect(() => {
+    if (!selectedWord || !chapter) {
+      return;
+    }
+    const element = article.current?.querySelector(`[data-word-key="${selectedWord.key}"]`);
+    element?.classList.add("word-selected");
+    return () => element?.classList.remove("word-selected");
+  }, [selectedWord, chapter]);
 
   // Quando um capítulo acaba de carregar: saltar para a frase guardada, ou
   // voltar ao topo se for outro capítulo.
@@ -279,7 +306,7 @@ export function ReaderPage() {
               // cumpriu o seu papel e dá lugar ao destaque da leitura.
               markedSentenceId={spokenSentenceId === null ? resumeSentenceId : null}
               activeSentenceId={spokenSentenceId}
-              onSentenceClick={player.playFromSentence}
+              onWordClick={handleWordClick}
             />
           )}
         </article>
@@ -306,6 +333,21 @@ export function ReaderPage() {
           </nav>
         )}
       </main>
+
+      {chapter && selectedWord && (
+        // "key" faz o React criar um painel novo para cada palavra, em vez de
+        // reaproveitar o estado do anterior.
+        <TutorPanel
+          key={selectedWord.key}
+          documentId={documentId}
+          word={selectedWord}
+          onClose={() => setSelectedWord(null)}
+          onPlayFromSentence={() => {
+            void player.playFromSentence(selectedWord.sentenceId);
+            setSelectedWord(null);
+          }}
+        />
+      )}
 
       {chapter && (
         <PlayerBar player={player} documentId={documentId} chapterPosition={chapterPosition} />

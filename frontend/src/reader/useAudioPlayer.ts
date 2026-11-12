@@ -277,6 +277,8 @@ export function useAudioPlayer({
     }
   }, [playbackRate]);
 
+  const pause = useCallback(() => audioRef.current?.pause(), []);
+
   /** A frase a partir da qual as ações de salto se orientam. */
   const anchorSentenceId = () => currentSentenceId ?? getStartSentenceId() ?? sentenceIds[0];
 
@@ -314,6 +316,7 @@ export function useAudioPlayer({
     currentSentenceId,
     privatePrompt,
     toggle,
+    pause,
     playFromSentence,
     previousSentence: () => jump(-1),
     nextSentence: () => jump(1),

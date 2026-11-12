@@ -5,6 +5,7 @@ import { usePreferences, type Theme } from "./lib/preferences";
 import { CostsPage } from "./pages/CostsPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { ReaderPage } from "./pages/ReaderPage";
+import { VocabularyPage } from "./pages/VocabularyPage";
 
 export function App() {
   return (
@@ -15,6 +16,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<LibraryPage />} />
           <Route path="/documents/:id" element={<ReaderPage />} />
+          <Route path="/vocabulario" element={<VocabularyPage />} />
           <Route path="/custos" element={<CostsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -33,6 +35,9 @@ function Footer() {
         <nav aria-label="Páginas" className="flex gap-5">
           <Link to="/" className="text-pen underline underline-offset-4">
             Biblioteca
+          </Link>
+          <Link to="/vocabulario" className="text-pen underline underline-offset-4">
+            Vocabulário
           </Link>
           <Link to="/custos" className="text-pen underline underline-offset-4">
             Custos

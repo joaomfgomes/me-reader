@@ -6,9 +6,9 @@ Corre só no teu Mac, como app web local, sem contas nem pagamentos.
 
 ## Estado
 
-**Fase 3 (tutor de palavra) em curso.** As Fases 1 e 2 estão concluídas: importas um EPUB, lê-lo e ouve-lo com a palavra em curso destacada, com velocidade ajustável, saltos entre frases, estimativa de custo e a página "Custos". Da Fase 3 existe o lado do servidor: explicar uma palavra no contexto da frase, guardar as explicações em cache e juntar as palavras consultadas ao vocabulário. Por agora o tutor é simulado e ainda não aparece na aplicação.
+**MVP concluído (Fases 0 a 3).** Importas um EPUB, lê-lo e ouve-lo com a palavra em curso destacada, e carregas em qualquer palavra para ver o que significa naquela frase: tradução, explicação em português de Portugal, lema, classe gramatical e pronúncia. As palavras consultadas ficam no vocabulário, com a frase onde as encontraste. O áudio e as explicações ficam guardados, por isso repetir não custa nada, e a página "Custos" mostra o consumo do mês. A seguir vêm o tutor de frases e a revisão com repetição espaçada.
 
-Sem configuração, a voz é simulada (um bip por palavra, sem chamadas externas). Para ouvir uma voz verdadeira, vê "Voz com o Azure" mais abaixo.
+Sem configuração, a voz e o tutor são simulados, sem chamadas externas. Para os verdadeiros, vê "Voz com o Azure" e "Tutor com a Anthropic" mais abaixo.
 
 O plano completo está em [docs/arquitetura.md](docs/arquitetura.md) e as decisões em [docs/adr/](docs/adr/).
 
@@ -45,6 +45,7 @@ O `uv` instala sozinho o Python 3.12. O `make dev` aplica as migrações da base
 | `make format` | Formata o código Python |
 | `make migrate` | Copia a base de dados para `data/backups/` e aplica as migrações em falta |
 | `make voice-check` | Testa o fornecedor de voz configurado, com chamadas verdadeiras |
+| `make tutor-check` | Testa o tutor configurado, com chamadas verdadeiras |
 
 ## Configuração
 
@@ -58,7 +59,8 @@ A configuração vive no ficheiro `.env`, criado a partir do [.env.example](.env
 | `READER_SPEECH_PROVIDER` | `fake` | Fornecedor de voz: `fake` (simulado, sem custos) ou `azure` |
 | `AZURE_SPEECH_KEY` | vazio | Chave do recurso Azure AI Speech |
 | `AZURE_SPEECH_REGION` | vazio | Região do recurso, por exemplo `westeurope` |
-| `READER_TUTOR_PROVIDER` | `fake` | Fornecedor do tutor. `fake` é simulado e não tem custos |
+| `READER_TUTOR_PROVIDER` | `fake` | Fornecedor do tutor: `fake` (simulado, sem custos) ou `anthropic` |
+| `ANTHROPIC_API_KEY` | vazio | Chave da API da Anthropic |
 | `READER_TUTOR_MODEL` | `claude-haiku-5-5` | Modelo usado pelo tutor |
 | `READER_MONTHLY_LLM_USD_LIMIT` | `2` | Teto mensal do tutor, em dólares de custo estimado |
 | `READER_MONTHLY_TTS_CHAR_LIMIT` | `500000` | Teto mensal de caracteres enviados ao serviço de voz |
@@ -72,6 +74,14 @@ A configuração vive no ficheiro `.env`, criado a partir do [.env.example](.env
 
 O texto de cada excerto que ouves pela primeira vez é enviado ao Azure. Nos documentos marcados como privados, a aplicação pede confirmação antes do primeiro envio. O teto mensal da aplicação (`READER_MONTHLY_TTS_CHAR_LIMIT`) impede que passes o escalão gratuito sem dar por isso.
 
+## Tutor com a Anthropic
+
+1. Cria uma chave da API na consola da Anthropic, só para este projeto, e define-lhe um teto de gasto.
+2. Põe a chave no `.env`, em `ANTHROPIC_API_KEY`, com `READER_TUTOR_PROVIDER=anthropic`.
+3. Confirma que funciona com `make tutor-check`, que explica uma palavra por língua e mostra o resultado.
+
+A frase da palavra que consultas e as duas frases vizinhas são enviadas à Anthropic da primeira vez; depois a explicação fica guardada. Nos documentos privados, a aplicação pede confirmação antes do primeiro envio. O teto mensal da aplicação (`READER_MONTHLY_LLM_USD_LIMIT`) limita o gasto estimado.
+
 ## Onde está cada coisa
 
 ```
@@ -80,14 +90,14 @@ backend/app/api/         rotas /api/v1
 backend/app/importing/   validação, extração, limpeza e segmentação de EPUB
 backend/app/storage/     interface de armazenamento de ficheiros (hoje disco)
 backend/app/audio/       cache de áudio, alinhamento de tempos e estimativa de custo
-backend/app/providers/   fornecedores externos: voz simulada e Azure AI Speech
+backend/app/providers/   fornecedores externos: Azure AI Speech, Anthropic e os simuladores
 backend/app/usage/       registo de consumo e teto mensal
 backend/app/tutor/       prompts versionados, cache e validação das explicações
 backend/app/vocabulary/  palavras consultadas
 backend/migrations/      migrações Alembic
 backend/tests/           testes do backend
-frontend/src/pages/      biblioteca, leitor e custos
-frontend/src/reader/     texto do capítulo e leitor de áudio
+frontend/src/pages/      biblioteca, leitor, vocabulário e custos
+frontend/src/reader/     texto do capítulo, leitor de áudio e painel do tutor
 frontend/src/api/        chamadas ao backend
 frontend/src/lib/        preferências e textos da interface
 data/                    base de dados, ficheiros, cópias de segurança e logs; fora do git

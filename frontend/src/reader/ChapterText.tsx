@@ -42,7 +42,12 @@ function sentencePieces(block: Block, sentence: Sentence): ReactNode[] {
       pieces.push(block.text.slice(cursor, start));
     }
     pieces.push(
-      <span key={start} data-word-key={wordKey(block.id, start)}>
+      <span
+        key={start}
+        data-word-key={wordKey(block.id, start)}
+        data-word-end={end}
+        className="cursor-pointer"
+      >
         {block.text.slice(start, end)}
       </span>,
     );
@@ -54,13 +59,24 @@ function sentencePieces(block: Block, sentence: Sentence): ReactNode[] {
   return pieces;
 }
 
+/** Uma palavra em que o leitor carregou. */
+export interface SelectedWord {
+  /** O mesmo valor de data-word-key, para encontrar o elemento. */
+  key: string;
+  text: string;
+  sentenceId: number;
+  /** Posição da palavra no texto do bloco. */
+  start: number;
+  end: number;
+}
+
 interface ChapterTextProps {
   chapter: ChapterDetail;
   /** A frase onde o leitor parou, passada a marcador ao abrir o livro. */
   markedSentenceId: number | null;
   /** A frase que está a ser lida em voz alta. */
   activeSentenceId: number | null;
-  onSentenceClick: (sentenceId: number) => void;
+  onWordClick: (word: SelectedWord) => void;
 }
 
 /**
@@ -78,19 +94,29 @@ export const ChapterText = memo(function ChapterText({
   chapter,
   markedSentenceId,
   activeSentenceId,
-  onSentenceClick,
+  onWordClick,
 }: ChapterTextProps) {
   // Um só "ouvinte" de cliques para o capítulo inteiro, em vez de um por
-  // frase: o clique sobe pela árvore e aqui procuramos a frase onde caiu.
+  // palavra: o clique sobe pela árvore e aqui procuramos a palavra onde caiu.
   function handleClick(event: MouseEvent<HTMLDivElement>) {
     // Se o utilizador acabou de selecionar texto com o rato, não é um clique.
     if (!window.getSelection()?.isCollapsed) {
       return;
     }
-    const sentence = (event.target as HTMLElement).closest<HTMLElement>("[data-sentence-id]");
-    if (sentence) {
-      onSentenceClick(Number(sentence.dataset.sentenceId));
+    const word = (event.target as HTMLElement).closest<HTMLElement>("[data-word-key]");
+    const sentence = word?.closest<HTMLElement>("[data-sentence-id]");
+    const key = word?.dataset.wordKey;
+    if (!word || !sentence || !key) {
+      return;
     }
+    onWordClick({
+      key,
+      text: word.textContent ?? "",
+      sentenceId: Number(sentence.dataset.sentenceId),
+      // A chave é "<bloco>-<início>"; o fim vem no seu próprio atributo.
+      start: Number(key.split("-")[1]),
+      end: Number(word.dataset.wordEnd),
+    });
   }
 
   // O primeiro parágrafo de um capítulo costuma ser o seu título.
@@ -115,7 +141,7 @@ export const ChapterText = memo(function ChapterText({
                 {index > 0 && " "}
                 <span
                   data-sentence-id={sentence.id}
-                  className={`cursor-pointer ${className ?? ""}`}
+                  className={className}
                   // Ao saltar para uma frase, deixa-a abaixo da barra fixa.
                   style={{ scrollMarginTop: HEADER_OFFSET_PX + 16 }}
                 >

@@ -31,6 +31,7 @@ export function CostsPage() {
       )}
 
       {usage.data && <VoiceUsage month={usage.data.month} tts={usage.data.tts} />}
+      {usage.data && <TutorUsage llm={usage.data.llm} />}
     </main>
   );
 }
@@ -100,6 +101,70 @@ function VoiceUsage({ month, tts }: { month: string; tts: Usage["tts"] }) {
         O custo é uma estimativa feita com o preço configurado na aplicação, não uma fatura. Dentro
         do escalão gratuito do serviço de voz, o valor cobrado é zero. O teto mensal e o preço
         mudam-se no ficheiro .env.
+      </p>
+    </section>
+  );
+}
+
+function TutorUsage({ llm }: { llm: Usage["llm"] }) {
+  const spent = llm.estimated_cost_usd;
+  const limit = llm.monthly_usd_limit;
+  const fraction = limit > 0 ? Math.min(1, spent / limit) : 1;
+  const reached = spent >= limit;
+
+  return (
+    <section aria-labelledby="tutor-heading" className="mt-14 border-t-2 border-ink pt-6">
+      <h2 id="tutor-heading" className="font-book text-2xl font-semibold">
+        Tutor
+      </h2>
+
+      {reached ? (
+        <p role="alert" className="mt-4 border-l-4 border-danger py-1 pl-3 text-danger">
+          Atingiste o teto mensal do tutor. As explicações já pedidas continuam disponíveis; as
+          novas voltam no início do próximo mês.
+        </p>
+      ) : (
+        fraction >= WARNING_THRESHOLD && (
+          <p role="alert" className="mt-4 border-l-4 border-danger py-1 pl-3">
+            Já usaste {formatPercent(fraction)} do teto mensal do tutor.
+          </p>
+        )
+      )}
+
+      <p className="mt-6 text-lg">
+        <span className="font-book text-4xl font-semibold">{formatUsd(spent)}</span> de{" "}
+        {formatUsd(limit)} em explicações, por estimativa
+      </p>
+      <meter
+        className="mt-3 h-3 w-full"
+        min={0}
+        max={limit}
+        value={Math.min(spent, limit)}
+        aria-label="Parte do teto mensal do tutor já usada"
+      />
+
+      <dl className="mt-8 grid gap-x-10 gap-y-5 sm:grid-cols-3">
+        <div>
+          <dt className="text-sm text-pencil">Palavras consultadas</dt>
+          <dd className="font-book text-2xl font-semibold">{formatCount(llm.requests)}</dd>
+        </div>
+        <div>
+          <dt className="text-sm text-pencil">Consultas servidas pela cache</dt>
+          <dd className="font-book text-2xl font-semibold">
+            {llm.cache_hit_rate === null ? "Sem consultas" : formatPercent(llm.cache_hit_rate)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-sm text-pencil">Tokens enviados e recebidos</dt>
+          <dd className="font-book text-2xl font-semibold">
+            {formatCount(llm.input_tokens + llm.output_tokens)}
+          </dd>
+        </div>
+      </dl>
+
+      <p className="mt-8 max-w-prose text-sm text-pencil">
+        Um token é um pedaço de palavra, a unidade em que o modelo do tutor é faturado. O custo é
+        estimado com os preços configurados na aplicação.
       </p>
     </section>
   );

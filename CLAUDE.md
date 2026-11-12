@@ -6,13 +6,7 @@ A arquitetura completa está em `docs/arquitetura.md` e as decisões em `docs/ad
 
 ## Fase em curso
 
-**Fase 3 em curso, dividida em três entregas.** Atualiza esta secção no fim de cada fase.
-
-1. Tutor de palavra no backend com fornecedor simulado: feita (2026-11-12).
-2. Fornecedor Anthropic em `providers/` e comparação de modelos com o conjunto de teste do ADR-005. Por fazer; precisa de `ANTHROPIC_API_KEY` no `.env`.
-3. Frontend: painel do tutor ao clicar numa palavra, página de vocabulário e custos do tutor. Por fazer.
-
-Cada entrega tem o seu plano e a sua aprovação; não avances para a seguinte sem pedido explícito.
+**Fase 3 concluída (2026-11-12): o MVP (Fases 0 a 3) está completo. A seguinte é a Fase 4, tutor de frase e revisão com repetição espaçada, que só começa com pedido explícito.** Atualiza esta secção no fim de cada fase.
 
 O que existe da Fase 0: backend FastAPI com `GET /api/v1/health`, SQLite em modo WAL, validação do cabeçalho Host, erros em `problem+json`, logs JSON com identificador por pedido, e um frontend com uma página de estado.
 
@@ -52,10 +46,15 @@ O que existe da Fase 3:
 - `tutor/prompts/`: prompts em ficheiros `<nome>_v<versão>.md`. Para mudar um prompt, cria um ficheiro com a versão seguinte e sobe a constante em `prompts/__init__.py`; nunca edites um ficheiro já usado.
 - `tutor/service.py`: `explain_word` devolve a explicação da cache ou pede-a ao tutor. A chave é `tutor_cache_key(frase, palavra, tipo, modelo, versão do prompt, língua)`. Uma resposta inválida dá uma nova tentativa; à segunda, erro `tutor_invalid_response` e nada entra na cache. O texto do livro vai sempre dentro de etiquetas (`<contexto>`, `<frase>`, `<palavra>`) na mensagem, nunca no prompt de sistema.
 - `providers/fake_tutor.py`: tutor simulado, o valor por omissão de `READER_TUTOR_PROVIDER`.
+- `providers/anthropic_tutor.py`: tutor com a API de mensagens da Anthropic (`READER_TUTOR_PROVIDER=anthropic`, com `ANTHROPIC_API_KEY`). Usa `output_config` com esquema JSON e esforço `low`; não envia `temperature` nem `thinking`, que os modelos atuais rejeitam. O modelo vem de `READER_TUTOR_MODEL`.
+- `make tutor-check` (`providers/tutor_check.py`): verificação manual com uma palavra por língua. Faz chamadas verdadeiras; não faz parte dos testes.
+- Na mensagem enviada ao modelo, os sinais `<` e `>` do texto do livro são convertidos em `&lt;` e `&gt;`, para o livro não conseguir fechar as etiquetas de dados.
 - `vocabulary/`: cada palavra consultada entra no vocabulário, uma entrada por língua e lema, com a frase original copiada. Sobrevive a apagar o documento.
 - Tabelas `tutor_responses` e `vocabulary_entries`, e colunas de tokens em `usage_events` (migração `0005`).
 - `api/tutor.py`: `POST /tutor/word` (a palavra é identificada pela posição na frase, não por texto livre), `GET /vocabulary` e `DELETE /vocabulary/{id}`. `GET /usage` inclui a secção `llm`.
 - Teto mensal do tutor em dólares (`READER_MONTHLY_LLM_USD_LIMIT`) e confirmação obrigatória para documentos privados, como no áudio.
+- Frontend do tutor: clicar numa palavra abre o `TutorPanel` (`frontend/src/reader/TutorPanel.tsx`), pausa o áudio e sublinha a palavra (classe `word-selected`, posta diretamente no DOM). O painel usa `useQuery`, para a mesma palavra não ser pedida duas vezes na mesma visita.
+- Página de vocabulário em `/vocabulario` (`pages/VocabularyPage.tsx`), com filtro por língua, e secção do tutor na página "Custos".
 
 Convenções a manter:
 
@@ -71,7 +70,7 @@ Por decidir ou por fazer mais tarde:
 - Mudar a língua de um documento não volta a dividir as frases.
 
 - Os títulos dos capítulos ficam também como primeiro parágrafo do texto. O leitor mostra esse parágrafo como cabeçalho quando é igual ao título.
-- Clicar numa frase toca a partir dela. Na Fase 3, clicar numa palavra vai abrir o tutor; é preciso separar os dois gestos nessa altura.
+- Clicar numa palavra abre o tutor. Tocar a partir de uma frase faz-se pelo botão "Ouvir a partir desta frase" do painel do tutor; já não há clique direto na frase.
 - No fim de um capítulo o áudio pára; não passa sozinho ao seguinte.
 - A confirmação de um documento privado fica só em memória, até fechar o separador.
 - As palavras são separadas pela mesma regra nas cinco línguas. Em francês e italiano, "l'homme" conta como uma palavra; rever na Fase 3, quando se carregar em palavras.
@@ -98,7 +97,7 @@ O MVP são as fases 0 a 3. Implementa uma fase de cada vez e não avances para a
 - **Frontend:** React, Vite, TypeScript, React Router, TanStack Query, Tailwind. Gestão com `pnpm`.
 - **Texto:** leitura direta do ZIP com `zipfile` + defusedxml + BeautifulSoup (EPUB), pypdf ou pdfplumber (PDF), pySBD (frases), lingua (deteção de língua).
 - **Voz:** Azure AI Speech, vozes Neural, com os tempos por palavra devolvidos pelo serviço, através do SDK `azure-cognitiveservices-speech`.
-- **Tutor:** LLM de baixo custo da Anthropic, atrás de interface própria, com saída JSON validada por Pydantic.
+- **Tutor:** LLM de baixo custo da Anthropic, através do SDK `anthropic`, atrás de interface própria, com saída JSON validada por Pydantic.
 - **Qualidade:** ruff, pytest, Vitest, gitleaks, GitHub Actions.
 
 Não uses PyMuPDF nem EbookLib (licença AGPL); confirma a licença de qualquer dependência nova antes de a acrescentar. Não acrescentes Redis, filas, Docker, Postgres nem autenticação nesta fase.
@@ -143,6 +142,7 @@ Comandos úteis fora do Makefile:
 - Um só teste do backend: `cd backend && uv run pytest tests/test_health.py -k nome`.
 - Nova migração: `cd backend && uv run alembic revision --autogenerate -m "descrição"`. Revê sempre o ficheiro gerado.
 - Confirmar que modelos e migrações coincidem: `cd backend && uv run alembic check`.
+- Testar o tutor do `.env` com chamadas verdadeiras: `make tutor-check` (cinco chamadas, uma fração de cêntimo).
 - Testar o fornecedor de voz do `.env` com chamadas verdadeiras: `make voice-check` (gasta cerca de 400 caracteres de quota).
 - Todas as verificações de pre-commit: `cd backend && uv run pre-commit run --all-files`.
 
@@ -174,7 +174,7 @@ Os testes do frontend usam `mockApi` e `renderPage` de `frontend/src/test/helper
 
 ## Decisões em aberto
 
-- Modelo concreto da Anthropic para o tutor: escolher o mais barato que explique bem em pt-PT, com o conjunto de teste de 20 frases por língua previsto no ADR-005.
+- O modelo do tutor é o Claude Haiku 5.5 com esforço `low`, por decisão do autor (2026-11-12), sem a comparação de modelos prevista no ADR-005. Numa amostra de cinco palavras o formato veio sempre válido e em pt-PT, mas com erros de conteúdo em duas ou três (lema errado em espanhol, um carácter cirílico na pronúncia em alemão, uma frase truncada em italiano). Se as explicações se revelarem fracas no uso, as opções são subir o esforço para `medium`, mudar `READER_TUTOR_MODEL` ou fazer a comparação.
 - Segundo fornecedor de voz. O autor escolheu o Azure (2026-11-12). O Google Cloud TTS foi avaliado e fica como alternativa se o escalão gratuito do Azure não chegar: só dá tempos por marcas SSML na API v1beta1, não nas vozes Chirp 3 HD, e um bloco nosso não cabe num pedido de 5 000 bytes; em troca, tem 4 M de caracteres grátis por mês em vozes WaveNet.
 - As vozes do Azure estão fixas em `providers/azure_speech.py`. O autor confirmou que quer inglês dos EUA (2026-11-12); as outras são espanhol de Espanha, francês de França, alemão da Alemanha e italiano. Escolher a voz na interface fica para depois.
 - Os cinco ADRs estão aceites (001 a 004 a 2026-11-11, 005 a 2026-11-12).

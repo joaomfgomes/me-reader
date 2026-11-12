@@ -101,3 +101,12 @@ html[data-theme="dark"] {
   color: var(--marker-ink);
   border-radius: 2px;
 }
+
+/* A palavra cuja explicação está aberta: sublinhada a azul de esferográfica,
+   como quem a marcou para ir ver ao dicionário. */
+.word-selected {
+  text-decoration: underline;
+  text-decoration-color: var(--pen);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}

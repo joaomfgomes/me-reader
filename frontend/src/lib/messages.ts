@@ -22,7 +22,15 @@ const ERROR_MESSAGES: Record<string, string> = {
   chapter_not_found: "O livro não tem esse capítulo.",
   unsupported_language: "Essa língua não é suportada.",
   language_required:
-    "Este livro não tem língua definida. Escolhe-a na biblioteca para o poderes ouvir.",
+    "Este livro não tem língua definida. Escolhe-a na biblioteca para o poderes ouvir e pedir explicações.",
+  llm_budget_exceeded:
+    "Atingiste o teto mensal do tutor. As explicações já pedidas continuam disponíveis; as novas voltam no início do próximo mês.",
+  tutor_provider_error: "O serviço do tutor falhou. Tenta outra vez daqui a pouco.",
+  tutor_invalid_response:
+    "O tutor não conseguiu dar uma explicação utilizável para esta palavra. Tenta outra vez.",
+  sentence_not_found: "Este texto já não existe. Volta à biblioteca e abre o livro outra vez.",
+  word_not_in_sentence: "Não foi possível identificar a palavra. Carrega nela outra vez.",
+  vocabulary_entry_not_found: "Essa palavra já não está no vocabulário.",
   tts_quota_exceeded:
     "Atingiste o teto mensal de voz. O áudio já gerado continua a tocar; o resto fica disponível no início do próximo mês.",
   tts_provider_error: "O serviço de voz falhou. Tenta outra vez daqui a pouco.",

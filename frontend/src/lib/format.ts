@@ -17,8 +17,13 @@ export function formatCount(value: number): string {
   return integer.format(value);
 }
 
-/** 2.584928 passa a "2,58 US$". */
+/** 2.584928 passa a "2,58 US$". Valores abaixo de um cêntimo não aparecem como zero. */
 export function formatUsd(value: number): string {
+  // Uma consulta ao tutor custa centésimos de cêntimo. Arredondar para
+  // "0,00 US$" daria a entender que foi grátis.
+  if (value > 0 && value < 0.01) {
+    return `menos de ${dollars.format(0.01)}`;
+  }
   return dollars.format(value);
 }
 

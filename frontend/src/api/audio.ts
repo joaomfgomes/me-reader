@@ -48,6 +48,17 @@ export interface Usage {
     monthly_character_limit: number;
     characters_remaining: number;
   };
+  /** Consumo do tutor. */
+  llm: {
+    requests: number;
+    cache_hits: number;
+    cache_hit_rate: number | null;
+    input_tokens: number;
+    output_tokens: number;
+    estimated_cost_usd: number;
+    monthly_usd_limit: number;
+    usd_remaining: number;
+  };
 }
 
 /**
