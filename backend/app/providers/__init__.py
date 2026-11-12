@@ -34,7 +34,12 @@ def create_tutor(settings: Settings) -> Tutor:
     """Escolhe a implementação do tutor indicada em READER_TUTOR_PROVIDER."""
     if settings.tutor_provider == "fake":
         return FakeTutor()
-    raise RuntimeError(
-        f"O fornecedor de tutor '{settings.tutor_provider}' ainda não está implementado. "
-        "Usa READER_TUTOR_PROVIDER=fake."
-    )
+    if settings.anthropic_api_key is None:
+        raise RuntimeError(
+            "READER_TUTOR_PROVIDER=anthropic precisa de ANTHROPIC_API_KEY no ficheiro .env. "
+            "Para correr sem conta na Anthropic, usa READER_TUTOR_PROVIDER=fake."
+        )
+    # Importado só aqui: quem usa o tutor simulado não carrega o SDK da Anthropic.
+    from app.providers.anthropic_tutor import AnthropicTutor
+
+    return AnthropicTutor(settings.anthropic_api_key.get_secret_value(), settings.tutor_model)

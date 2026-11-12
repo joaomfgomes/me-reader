@@ -54,6 +54,12 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AZURE_SPEECH_REGION", "READER_AZURE_SPEECH_REGION"),
     )
 
+    # Chave da API da Anthropic, só necessária com tutor_provider="anthropic".
+    anthropic_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("ANTHROPIC_API_KEY", "READER_ANTHROPIC_API_KEY"),
+    )
+
     # Fornecedor e modelo do tutor. "fake" não faz chamadas externas.
     tutor_provider: Literal["fake", "anthropic"] = "fake"
     tutor_model: str = "claude-haiku-5-5"

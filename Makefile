@@ -1,7 +1,7 @@
 # Comandos do dia a dia. Corre "make" sem argumentos para ver a lista.
 #
 # .PHONY diz ao make que estes nomes são comandos e não ficheiros a construir.
-.PHONY: help setup dev dev-backend dev-frontend migrate test lint format voice-check
+.PHONY: help setup dev dev-backend dev-frontend migrate test lint format voice-check tutor-check
 
 help:
 	@echo "make setup    instala dependências, cria o .env e ativa o pre-commit"
@@ -11,6 +11,7 @@ help:
 	@echo "make format   formata o código Python"
 	@echo "make migrate  aplica as migrações em falta à base de dados"
 	@echo "make voice-check  testa o fornecedor de voz configurado (gasta quota)"
+	@echo "make tutor-check  testa o tutor configurado com uma palavra por língua"
 
 setup:
 	cd backend && uv sync
@@ -52,3 +53,8 @@ format:
 # Com o Azure faz chamadas verdadeiras: gasta cerca de 400 caracteres da quota.
 voice-check:
 	cd backend && uv run python -m app.providers.voice_check
+
+# Verificação manual do tutor do .env, com uma palavra por língua. Com a
+# Anthropic faz cinco chamadas verdadeiras, que custam uma fração de cêntimo.
+tutor-check:
+	cd backend && uv run python -m app.providers.tutor_check

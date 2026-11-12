@@ -1,7 +1,7 @@
 """Interface do tutor: o que a aplicação precisa de um modelo de linguagem.
 
 O resto da app só conhece este ficheiro. As implementações concretas (o
-simulador e, na próxima entrega, a Anthropic) vivem em app/providers/ e podem
+simulador e a Anthropic) vivem em app/providers/ e podem
 ser trocadas sem mexer em mais nada (ADR-005).
 """
 

@@ -1,6 +1,7 @@
 """Explicação de uma palavra: devolver a que está em cache ou pedi-la ao tutor."""
 
 import hashlib
+import html
 import json
 import logging
 import threading
@@ -74,13 +75,23 @@ def build_word_message(
     As etiquetas separam o que é material do livro do que são instruções
     nossas (que vão no prompt de sistema). É a defesa contra texto do livro que
     tente dar ordens ao modelo, a chamada "injeção de prompt".
+
+    Para a separação valer, o texto do livro não pode conter etiquetas: uma
+    frase com "</frase>" lá dentro fecharia a etiqueta e o resto passaria por
+    instruções. Por isso os sinais "<" e ">" do livro são convertidos em
+    "&lt;" e "&gt;", que o modelo lê como os mesmos sinais, mas que não abrem
+    nem fecham nada.
     """
+
+    def data(text: str) -> str:
+        return html.escape(text, quote=False)
+
     context = " ".join(part for part in (before, sentence, after) if part)
     return (
         f"Língua do texto: {LANGUAGE_NAMES.get(language, language)}\n\n"
-        f"<contexto>\n{context}\n</contexto>\n\n"
-        f"<frase>\n{sentence}\n</frase>\n\n"
-        f"<palavra>{word}</palavra>"
+        f"<contexto>\n{data(context)}\n</contexto>\n\n"
+        f"<frase>\n{data(sentence)}\n</frase>\n\n"
+        f"<palavra>{data(word)}</palavra>"
     )
 
 
@@ -275,12 +286,15 @@ def _ask_tutor(
         prompt_version=WORD_PROMPT_VERSION,
         response=explanation.model_dump(),
     )
-    session.add(stored)
     try:
-        session.flush()
+        # begin_nested abre um "savepoint": um ponto de retorno dentro da
+        # transação. Se este INSERT falhar, só ele é desfeito. Um rollback da
+        # transação inteira apagaria também os eventos de consumo registados
+        # acima, e o gasto já feito deixaria de contar para o teto mensal.
+        with session.begin_nested():
+            session.add(stored)
     except IntegrityError:
         # Outro processo gravou a mesma resposta entretanto; usamos a dele.
-        session.rollback()
         return session.scalars(select(TutorResponse).where(TutorResponse.content_hash == key)).one()
 
     # Só identificadores, contagens e tempos; nunca a frase nem a palavra.
