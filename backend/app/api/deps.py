@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.audio.voice import SpeechSynthesizer
 from app.core.config import Settings
 from app.storage.base import FileStorage
+from app.tutor.tutor import Tutor
 
 
 def get_session(request: Request) -> Iterator[Session]:
@@ -35,8 +36,13 @@ def get_settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
+def get_tutor(request: Request) -> Tutor:
+    return request.app.state.tutor
+
+
 # Atalhos para escrever "session: SessionDep" nos parâmetros das rotas.
 SessionDep = Annotated[Session, Depends(get_session)]
 StorageDep = Annotated[FileStorage, Depends(get_storage)]
 SpeechDep = Annotated[SpeechSynthesizer, Depends(get_speech)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+TutorDep = Annotated[Tutor, Depends(get_tutor)]

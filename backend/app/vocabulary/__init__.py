@@ -1,4 +1,5 @@
 """Vocabulário guardado e repetição espaçada (Fases 3 e 4).
 
-Guarda palavras com a frase original e calcula as próximas revisões, tudo localmente
-e sem chamadas externas."""
+Guarda as palavras consultadas com a frase original. O cálculo das próximas revisões
+entra na Fase 4. Tudo local, sem chamadas externas.
+"""

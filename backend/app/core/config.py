@@ -54,6 +54,16 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AZURE_SPEECH_REGION", "READER_AZURE_SPEECH_REGION"),
     )
 
+    # Fornecedor e modelo do tutor. "fake" não faz chamadas externas.
+    tutor_provider: Literal["fake", "anthropic"] = "fake"
+    tutor_model: str = "claude-haiku-5-5"
+    # Teto mensal do tutor, em dólares de custo estimado.
+    monthly_llm_usd_limit: float = 2.0
+    # Preços do modelo, só para estimar custos. São os do Claude Haiku 5.5;
+    # se mudares de modelo, muda também estes valores.
+    llm_input_usd_per_million_tokens: float = 0.10
+    llm_output_usd_per_million_tokens: float = 0.50
+
     # Teto de caracteres sintetizados por mês. O valor por omissão é o
     # escalão gratuito do Azure AI Speech.
     monthly_tts_char_limit: int = 500_000

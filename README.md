@@ -6,7 +6,7 @@ Corre só no teu Mac, como app web local, sem contas nem pagamentos.
 
 ## Estado
 
-**Fase 2 (áudio com destaque) concluída.** Importas um EPUB, lê-lo e ouve-lo com a palavra em curso destacada. Podes mudar a velocidade, saltar entre frases, ver quanto custaria o áudio antes de o gerar e consultar o consumo do mês na página "Custos". O áudio fica guardado: ouvir o mesmo texto outra vez não custa nada. A seguir vem o tutor, que explica palavras em português.
+**Fase 3 (tutor de palavra) em curso.** As Fases 1 e 2 estão concluídas: importas um EPUB, lê-lo e ouve-lo com a palavra em curso destacada, com velocidade ajustável, saltos entre frases, estimativa de custo e a página "Custos". Da Fase 3 existe o lado do servidor: explicar uma palavra no contexto da frase, guardar as explicações em cache e juntar as palavras consultadas ao vocabulário. Por agora o tutor é simulado e ainda não aparece na aplicação.
 
 Sem configuração, a voz é simulada (um bip por palavra, sem chamadas externas). Para ouvir uma voz verdadeira, vê "Voz com o Azure" mais abaixo.
 
@@ -58,6 +58,9 @@ A configuração vive no ficheiro `.env`, criado a partir do [.env.example](.env
 | `READER_SPEECH_PROVIDER` | `fake` | Fornecedor de voz: `fake` (simulado, sem custos) ou `azure` |
 | `AZURE_SPEECH_KEY` | vazio | Chave do recurso Azure AI Speech |
 | `AZURE_SPEECH_REGION` | vazio | Região do recurso, por exemplo `westeurope` |
+| `READER_TUTOR_PROVIDER` | `fake` | Fornecedor do tutor. `fake` é simulado e não tem custos |
+| `READER_TUTOR_MODEL` | `claude-haiku-5-5` | Modelo usado pelo tutor |
+| `READER_MONTHLY_LLM_USD_LIMIT` | `2` | Teto mensal do tutor, em dólares de custo estimado |
 | `READER_MONTHLY_TTS_CHAR_LIMIT` | `500000` | Teto mensal de caracteres enviados ao serviço de voz |
 | `READER_TTS_USD_PER_MILLION_CHARS` | `16` | Preço usado para estimar custos |
 
@@ -79,7 +82,8 @@ backend/app/storage/     interface de armazenamento de ficheiros (hoje disco)
 backend/app/audio/       cache de áudio, alinhamento de tempos e estimativa de custo
 backend/app/providers/   fornecedores externos: voz simulada e Azure AI Speech
 backend/app/usage/       registo de consumo e teto mensal
-backend/app/<módulo>/    tutor, vocabulary (ainda vazios)
+backend/app/tutor/       prompts versionados, cache e validação das explicações
+backend/app/vocabulary/  palavras consultadas
 backend/migrations/      migrações Alembic
 backend/tests/           testes do backend
 frontend/src/pages/      biblioteca, leitor e custos

@@ -162,7 +162,72 @@ class TtsUsageOut(ApiModel):
     characters_remaining: int
 
 
+class LlmUsageOut(ApiModel):
+    requests: int
+    cache_hits: int
+    cache_hit_rate: float | None
+    input_tokens: int
+    output_tokens: int
+    estimated_cost_usd: float
+    monthly_usd_limit: float
+    usd_remaining: float
+
+
 class UsageOut(BaseModel):
     # Mês a que os números dizem respeito, no formato "2026-11" (UTC).
     month: str
     tts: TtsUsageOut
+    # Consumo do tutor.
+    llm: LlmUsageOut
+
+
+# --- Tutor e vocabulário ----------------------------------------------------
+
+
+class WordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    sentence_id: int
+    # Posição da palavra no texto do bloco, tal como vem em Sentence.words.
+    # O pedido identifica a palavra pela posição e não pelo texto: o backend
+    # vai buscá-la ao documento, e assim só sai texto que lá está.
+    word_start: int
+    word_end: int
+    confirm_private: bool = False
+
+
+class WordExplanationOut(ApiModel):
+    lemma: str
+    part_of_speech: str
+    translation: str
+    definition: str
+    pronunciation: str
+    ipa: str
+
+
+class WordResponse(BaseModel):
+    word: str
+    sentence_id: int
+    explanation: WordExplanationOut
+    # True se a explicação veio da cache, sem custo.
+    cached: bool
+    vocabulary_entry_id: int
+
+
+class VocabularyEntryOut(ApiModel):
+    id: int
+    language: str
+    word: str
+    explanation: WordExplanationOut
+    # A frase onde a palavra foi encontrada da primeira vez.
+    sentence_text: str
+    # None se o documento já foi apagado.
+    document_id: int | None
+    lookup_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class VocabularyList(BaseModel):
+    items: list[VocabularyEntryOut]
+    next_cursor: str | None

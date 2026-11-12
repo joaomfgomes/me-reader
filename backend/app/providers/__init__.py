@@ -7,6 +7,8 @@ externos diretamente. Trocar de fornecedor é implementar a interface aqui (ADR-
 from app.audio.voice import SpeechSynthesizer
 from app.core.config import Settings
 from app.providers.fake_speech import FakeSpeechSynthesizer
+from app.providers.fake_tutor import FakeTutor
+from app.tutor.tutor import Tutor
 
 
 def create_speech_synthesizer(settings: Settings) -> SpeechSynthesizer:
@@ -25,4 +27,14 @@ def create_speech_synthesizer(settings: Settings) -> SpeechSynthesizer:
 
     return AzureSpeechSynthesizer(
         settings.azure_speech_key.get_secret_value(), settings.azure_speech_region
+    )
+
+
+def create_tutor(settings: Settings) -> Tutor:
+    """Escolhe a implementação do tutor indicada em READER_TUTOR_PROVIDER."""
+    if settings.tutor_provider == "fake":
+        return FakeTutor()
+    raise RuntimeError(
+        f"O fornecedor de tutor '{settings.tutor_provider}' ainda não está implementado. "
+        "Usa READER_TUTOR_PROVIDER=fake."
     )

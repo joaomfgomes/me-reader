@@ -8,7 +8,9 @@ from alembic.runtime.migration import MigrationContext
 # mas é intencional.
 import app.audio.models  # noqa: F401
 import app.importing.models  # noqa: F401
+import app.tutor.models  # noqa: F401
 import app.usage.models  # noqa: F401
+import app.vocabulary.models  # noqa: F401
 from app.core.backup import backup_database
 from app.core.config import Settings
 from app.core.db import Base, UtcDateTime, create_db_engine, ensure_database_dir

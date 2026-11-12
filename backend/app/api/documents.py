@@ -1,7 +1,5 @@
 """Rotas de documentos: importar, listar, ler, corrigir, apagar e guardar a posição."""
 
-import base64
-import binascii
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -10,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import SessionDep, StorageDep
+from app.api.pagination import decode_cursor, encode_cursor
 from app.api.schemas import (
     ChapterDetail,
     ChapterSummary,
@@ -73,21 +72,6 @@ def _document_detail(session: Session, document: Document) -> DocumentDetail:
     )
 
 
-def _encode_cursor(document_id: int) -> str:
-    # O cursor é o id do último documento da página, disfarçado em base64 para
-    # o cliente o tratar como um valor opaco e não fazer contas com ele.
-    return base64.urlsafe_b64encode(str(document_id).encode()).decode()
-
-
-def _decode_cursor(cursor: str) -> int:
-    try:
-        return int(base64.urlsafe_b64decode(cursor.encode()).decode())
-    except (binascii.Error, ValueError) as exc:
-        raise ProblemError(
-            422, "invalid_cursor", "Cursor inválido", "Usa o next_cursor da resposta anterior."
-        ) from exc
-
-
 # --- Rotas ------------------------------------------------------------------
 
 
@@ -123,7 +107,7 @@ def list_documents(
     # salta documentos se a biblioteca mudar entre dois pedidos.
     query = select(Document).order_by(Document.id.desc()).limit(limit + 1)
     if cursor is not None:
-        query = query.where(Document.id < _decode_cursor(cursor))
+        query = query.where(Document.id < decode_cursor(cursor))
     documents = list(session.scalars(query))
 
     # Pedimos uma linha a mais do que o limite só para saber se há mais páginas.
@@ -131,7 +115,7 @@ def list_documents(
     documents = documents[:limit]
     return DocumentList(
         items=[DocumentSummary.model_validate(document) for document in documents],
-        next_cursor=_encode_cursor(documents[-1].id) if has_more else None,
+        next_cursor=encode_cursor(documents[-1].id) if has_more else None,
     )
 
 

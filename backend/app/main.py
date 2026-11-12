@@ -18,7 +18,7 @@ from app.core.middleware import (
     RequestContextMiddleware,
 )
 from app.importing import validation
-from app.providers import create_speech_synthesizer
+from app.providers import create_speech_synthesizer, create_tutor
 from app.storage.disk import DiskStorage
 
 MULTIPART_OVERHEAD_BYTES = 64 * 1024
@@ -51,6 +51,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.session_factory = create_session_factory(engine)
     app.state.storage = DiskStorage(settings.data_dir / "files")
     app.state.speech = TrackedSynthesizer(create_speech_synthesizer(settings))
+    app.state.tutor = create_tutor(settings)
 
     register_error_handlers(app)
 

@@ -6,9 +6,13 @@ A arquitetura completa está em `docs/arquitetura.md` e as decisões em `docs/ad
 
 ## Fase em curso
 
-**Fase 2 concluída (2026-11-12). A seguinte é a Fase 3, tutor de palavra, que só começa com pedido explícito.** Atualiza esta secção no fim de cada fase.
+**Fase 3 em curso, dividida em três entregas.** Atualiza esta secção no fim de cada fase.
 
-Para a Fase 3 já está decidido: o fornecedor de LLM é a Anthropic e o ADR-005 foi aprovado (2026-11-12).
+1. Tutor de palavra no backend com fornecedor simulado: feita (2026-11-12).
+2. Fornecedor Anthropic em `providers/` e comparação de modelos com o conjunto de teste do ADR-005. Por fazer; precisa de `ANTHROPIC_API_KEY` no `.env`.
+3. Frontend: painel do tutor ao clicar numa palavra, página de vocabulário e custos do tutor. Por fazer.
+
+Cada entrega tem o seu plano e a sua aprovação; não avances para a seguinte sem pedido explícito.
 
 O que existe da Fase 0: backend FastAPI com `GET /api/v1/health`, SQLite em modo WAL, validação do cabeçalho Host, erros em `problem+json`, logs JSON com identificador por pedido, e um frontend com uma página de estado.
 
@@ -42,7 +46,16 @@ O que existe da Fase 2:
 - Com áudio a tocar, a posição guardada é a frase que está a ser dita; sem áudio, a primeira frase visível.
 - Página "Custos" em `/custos` (`pages/CostsPage.tsx`), com aviso a partir de 80% do teto.
 
-Os módulos `tutor` e `vocabulary` estão vazios.
+O que existe da Fase 3:
+
+- `tutor/tutor.py`: a interface `Tutor` e o esquema `WordExplanation` (lema, classe gramatical, tradução, definição, pronúncia e IPA). O fornecedor devolve texto em bruto; quem valida é o serviço.
+- `tutor/prompts/`: prompts em ficheiros `<nome>_v<versão>.md`. Para mudar um prompt, cria um ficheiro com a versão seguinte e sobe a constante em `prompts/__init__.py`; nunca edites um ficheiro já usado.
+- `tutor/service.py`: `explain_word` devolve a explicação da cache ou pede-a ao tutor. A chave é `tutor_cache_key(frase, palavra, tipo, modelo, versão do prompt, língua)`. Uma resposta inválida dá uma nova tentativa; à segunda, erro `tutor_invalid_response` e nada entra na cache. O texto do livro vai sempre dentro de etiquetas (`<contexto>`, `<frase>`, `<palavra>`) na mensagem, nunca no prompt de sistema.
+- `providers/fake_tutor.py`: tutor simulado, o valor por omissão de `READER_TUTOR_PROVIDER`.
+- `vocabulary/`: cada palavra consultada entra no vocabulário, uma entrada por língua e lema, com a frase original copiada. Sobrevive a apagar o documento.
+- Tabelas `tutor_responses` e `vocabulary_entries`, e colunas de tokens em `usage_events` (migração `0005`).
+- `api/tutor.py`: `POST /tutor/word` (a palavra é identificada pela posição na frase, não por texto livre), `GET /vocabulary` e `DELETE /vocabulary/{id}`. `GET /usage` inclui a secção `llm`.
+- Teto mensal do tutor em dólares (`READER_MONTHLY_LLM_USD_LIMIT`) e confirmação obrigatória para documentos privados, como no áudio.
 
 Convenções a manter:
 
@@ -63,6 +76,8 @@ Por decidir ou por fazer mais tarde:
 - A confirmação de um documento privado fica só em memória, até fechar o separador.
 - As palavras são separadas pela mesma regra nas cinco línguas. Em francês e italiano, "l'homme" conta como uma palavra; rever na Fase 3, quando se carregar em palavras.
 - A cópia diária da base de dados prevista na arquitetura não está feita; só a que antecede as migrações.
+- As respostas do tutor em cache não são apagadas quando se apaga um documento: não guardam a frase, só a explicação, e são partilhadas por hash.
+- O contexto enviado ao tutor é a frase e as duas vizinhas do mesmo bloco.
 - A pré-geração de um capítulo inteiro em fundo não está feita; o áudio é gerado bloco a bloco, a pedido.
 - O preço por carácter (`READER_TTS_USD_PER_MILLION_CHARS`, 16 USD) não foi confirmado na página oficial do Azure.
 

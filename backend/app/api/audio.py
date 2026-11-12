@@ -11,6 +11,7 @@ from app.api.schemas import (
     AudioRequest,
     BlockAudioOut,
     EstimateRequest,
+    LlmUsageOut,
     TimedWordOut,
     TtsUsageOut,
     UsageOut,
@@ -19,7 +20,7 @@ from app.audio.models import AudioAsset
 from app.audio.service import estimate_audio, get_block_audio
 from app.core.errors import ProblemError
 from app.importing.models import Chapter, Document
-from app.usage.service import get_tts_usage_summary
+from app.usage.service import get_llm_usage_summary, get_tts_usage_summary
 
 router = APIRouter(tags=["audio"])
 
@@ -154,6 +155,10 @@ def estimate_document_audio(
 
 @router.get("/usage", response_model=UsageOut)
 def get_usage(session: SessionDep, settings: SettingsDep) -> UsageOut:
-    """Consumo de voz no mês corrente."""
+    """Consumo de voz e do tutor no mês corrente."""
     summary = get_tts_usage_summary(session, settings)
-    return UsageOut(month=summary.month, tts=TtsUsageOut.model_validate(summary))
+    return UsageOut(
+        month=summary.month,
+        tts=TtsUsageOut.model_validate(summary),
+        llm=LlmUsageOut.model_validate(get_llm_usage_summary(session, settings)),
+    )
