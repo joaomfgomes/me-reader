@@ -6,7 +6,9 @@ Corre só no teu Mac, como app web local, sem contas nem pagamentos.
 
 ## Estado
 
-**Fase 2 (áudio com destaque) em curso.** Já podes importar um EPUB, lê-lo e ouvi-lo com a palavra em curso destacada, mudar a velocidade, saltar entre frases, ver quanto custaria o áudio e consultar o consumo do mês na página "Custos". Por agora a voz é simulada: ouve-se um bip por palavra, sem chamadas externas nem custos. Falta ligar um serviço de voz verdadeiro.
+**Fase 2 (áudio com destaque) concluída.** Importas um EPUB, lê-lo e ouve-lo com a palavra em curso destacada. Podes mudar a velocidade, saltar entre frases, ver quanto custaria o áudio antes de o gerar e consultar o consumo do mês na página "Custos". O áudio fica guardado: ouvir o mesmo texto outra vez não custa nada. A seguir vem o tutor, que explica palavras em português.
+
+Sem configuração, a voz é simulada (um bip por palavra, sem chamadas externas). Para ouvir uma voz verdadeira, vê "Voz com o Azure" mais abaixo.
 
 O plano completo está em [docs/arquitetura.md](docs/arquitetura.md) e as decisões em [docs/adr/](docs/adr/).
 
@@ -42,6 +44,7 @@ O `uv` instala sozinho o Python 3.12. O `make dev` aplica as migrações da base
 | `make lint` | Verifica o código com ruff e os tipos com TypeScript |
 | `make format` | Formata o código Python |
 | `make migrate` | Copia a base de dados para `data/backups/` e aplica as migrações em falta |
+| `make voice-check` | Testa o fornecedor de voz configurado, com chamadas verdadeiras |
 
 ## Configuração
 
@@ -52,9 +55,19 @@ A configuração vive no ficheiro `.env`, criado a partir do [.env.example](.env
 | `READER_DATA_DIR` | `./data` | Pasta da base de dados, dos originais, do áudio e dos logs |
 | `READER_PORT` | `8000` | Porta do backend |
 | `READER_LOG_LEVEL` | `INFO` | Nível de detalhe dos logs |
-| `READER_SPEECH_PROVIDER` | `fake` | Fornecedor de voz. `fake` é simulado e não tem custos |
+| `READER_SPEECH_PROVIDER` | `fake` | Fornecedor de voz: `fake` (simulado, sem custos) ou `azure` |
+| `AZURE_SPEECH_KEY` | vazio | Chave do recurso Azure AI Speech |
+| `AZURE_SPEECH_REGION` | vazio | Região do recurso, por exemplo `westeurope` |
 | `READER_MONTHLY_TTS_CHAR_LIMIT` | `500000` | Teto mensal de caracteres enviados ao serviço de voz |
 | `READER_TTS_USD_PER_MILLION_CHARS` | `16` | Preço usado para estimar custos |
+
+## Voz com o Azure
+
+1. No portal do Azure, cria um recurso "Speech" no escalão gratuito F0, que dá 500 000 caracteres por mês em vozes Neural e não acumula custos.
+2. Copia a chave e a região do recurso para o `.env`, em `AZURE_SPEECH_KEY` e `AZURE_SPEECH_REGION`, e põe `READER_SPEECH_PROVIDER=azure`.
+3. Confirma que funciona com `make voice-check`, que sintetiza uma frase por língua (cerca de 400 caracteres da quota).
+
+O texto de cada excerto que ouves pela primeira vez é enviado ao Azure. Nos documentos marcados como privados, a aplicação pede confirmação antes do primeiro envio. O teto mensal da aplicação (`READER_MONTHLY_TTS_CHAR_LIMIT`) impede que passes o escalão gratuito sem dar por isso.
 
 ## Onde está cada coisa
 
@@ -64,7 +77,7 @@ backend/app/api/         rotas /api/v1
 backend/app/importing/   validação, extração, limpeza e segmentação de EPUB
 backend/app/storage/     interface de armazenamento de ficheiros (hoje disco)
 backend/app/audio/       cache de áudio, alinhamento de tempos e estimativa de custo
-backend/app/providers/   fornecedores externos (por agora, só a voz simulada)
+backend/app/providers/   fornecedores externos: voz simulada e Azure AI Speech
 backend/app/usage/       registo de consumo e teto mensal
 backend/app/<módulo>/    tutor, vocabulary (ainda vazios)
 backend/migrations/      migrações Alembic

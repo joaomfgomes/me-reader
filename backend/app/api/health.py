@@ -3,7 +3,7 @@
 import logging
 import tempfile
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -27,8 +27,24 @@ class HealthResponse(BaseModel):
     documentá-la automaticamente em /docs.
     """
 
-    status: Literal["ok"]
+    # "degraded": o essencial funciona, mas um serviço externo está a falhar.
+    status: Literal["ok", "degraded"]
     checks: dict[str, CheckStatus]
+
+
+# Depois deste tempo sem novas falhas, deixamos de assinalar o serviço de voz.
+SPEECH_FAILURE_WINDOW = timedelta(minutes=10)
+
+
+def speech_status(speech: object) -> CheckStatus:
+    """Estado do serviço de voz, pelo resultado da última síntese pedida.
+
+    Não fazemos uma chamada de teste ao fornecedor: custaria quota a cada
+    verificação. Olhamos para o que aconteceu da última vez que foi usado.
+    """
+    last_failure = getattr(speech, "last_failure_at", None)
+    recent = last_failure is not None and datetime.now(UTC) - last_failure < SPEECH_FAILURE_WINDOW
+    return "error" if recent else "ok"
 
 
 def check_database_writable(engine: Engine) -> None:
@@ -97,4 +113,9 @@ def get_health(request: Request) -> HealthResponse:
             "as permissões da pasta de dados.",
             checks=checks,
         )
-    return HealthResponse(status="ok", checks=checks)
+    # O serviço de voz é externo: se falhar, a leitura e o áudio em cache
+    # continuam a funcionar. Por isso não entra nas verificações acima, que
+    # dão 503; só muda o estado para "degradado", com resposta 200.
+    checks["speech"] = speech_status(request.app.state.speech)
+    status = "degraded" if checks["speech"] == "error" else "ok"
+    return HealthResponse(status=status, checks=checks)

@@ -19,7 +19,7 @@ def test_health_is_ok_when_everything_works(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "status": "ok",
-        "checks": {"database": "ok", "data_dir": "ok", "migrations": "ok"},
+        "checks": {"database": "ok", "data_dir": "ok", "migrations": "ok", "speech": "ok"},
     }
 
 

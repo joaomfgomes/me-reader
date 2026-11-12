@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Este ficheiro está em backend/app/core/config.py. Subir três níveis dá a pasta
@@ -41,6 +41,19 @@ class Settings(BaseSettings):
 
     # Fornecedor de voz. "fake" não faz chamadas externas nem gasta quota.
     speech_provider: Literal["fake", "azure"] = "fake"
+    # Credenciais do Azure AI Speech, só necessárias com speech_provider="azure".
+    # Aceitam os nomes habituais da Microsoft (AZURE_SPEECH_KEY) ou com o
+    # prefixo da app. SecretStr esconde o valor se o objeto for impresso ou
+    # registado por engano; para o usar é preciso chamar .get_secret_value().
+    azure_speech_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("AZURE_SPEECH_KEY", "READER_AZURE_SPEECH_KEY"),
+    )
+    azure_speech_region: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("AZURE_SPEECH_REGION", "READER_AZURE_SPEECH_REGION"),
+    )
+
     # Teto de caracteres sintetizados por mês. O valor por omissão é o
     # escalão gratuito do Azure AI Speech.
     monthly_tts_char_limit: int = 500_000

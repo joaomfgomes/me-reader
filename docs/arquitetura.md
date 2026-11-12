@@ -285,7 +285,7 @@ A stack é Python no backend e TypeScript no frontend, com bibliotecas maduras e
 | EPUB | Leitura direta do ZIP (`zipfile`, defusedxml) + BeautifulSoup | EbookLib | EPUB é HTML dentro de um ZIP. A EbookLib tem licença AGPL, tal como o PyMuPDF; ler o ZIP diretamente dá ainda controlo total sobre os limites de segurança |
 | PDF | pypdf ou pdfplumber | PyMuPDF | PyMuPDF extrai melhor, mas tem licença AGPL, o que pesa num repositório público e numa futura app web |
 | Frases e língua | pySBD para frases, lingua para deteção | spaCy | Leves e suficientes para as cinco línguas; spaCy só se precisares de análise gramatical local |
-| Voz | SDK do Azure AI Speech | Kokoro local | Tempos por palavra nas cinco línguas |
+| Voz | SDK do Azure AI Speech (licença proprietária da Microsoft) | Kokoro local; Google Cloud TTS | Tempos por palavra nas cinco línguas. A API REST do Azure não os devolve, daí o SDK |
 | Tutor | SDK do fornecedor escolhido, atrás de interface | Ollama local | Saída JSON validada com Pydantic |
 | Revisão | Algoritmo SM-2 escrito à mão | FSRS (biblioteca) | SM-2 cabe em 30 linhas e percebe-se; FSRS é melhor, mas é uma caixa preta |
 | Frontend | React, Vite, TypeScript, React Router, TanStack Query, Tailwind | Svelte | O mais documentado; modo escuro e tamanho de letra são triviais |

@@ -4,6 +4,8 @@ export type CheckStatus = "ok" | "error";
 
 export interface HealthReport {
   healthy: boolean;
+  /** O essencial funciona, mas um serviço externo (a voz) está a falhar. */
+  degraded: boolean;
   /** Estado de cada verificação: database, data_dir e migrations. */
   checks: Record<string, CheckStatus>;
 }
@@ -23,7 +25,8 @@ export async function fetchHealth(): Promise<HealthReport> {
   const body: unknown = await response.json();
 
   if (hasChecks(body) && (response.ok || response.status === 503)) {
-    return { healthy: response.ok, checks: body.checks };
+    const degraded = "status" in body && body.status === "degraded";
+    return { healthy: response.ok, degraded, checks: body.checks };
   }
   throw new Error(`Resposta inesperada do servidor (HTTP ${response.status})`);
 }

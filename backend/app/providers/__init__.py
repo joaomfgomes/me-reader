@@ -15,7 +15,14 @@ def create_speech_synthesizer(settings: Settings) -> SpeechSynthesizer:
         return FakeSpeechSynthesizer()
     # Falhar no arranque, com uma mensagem clara, é melhor do que arrancar e
     # só dar erro quando alguém carregar no botão de ouvir.
-    raise RuntimeError(
-        f"O fornecedor de voz '{settings.speech_provider}' ainda não está implementado. "
-        "Usa READER_SPEECH_PROVIDER=fake."
+    if settings.azure_speech_key is None or not settings.azure_speech_region:
+        raise RuntimeError(
+            "READER_SPEECH_PROVIDER=azure precisa de AZURE_SPEECH_KEY e AZURE_SPEECH_REGION "
+            "no ficheiro .env. Para correr sem conta no Azure, usa READER_SPEECH_PROVIDER=fake."
+        )
+    # Importado só aqui: quem usa a voz simulada não carrega o SDK do Azure.
+    from app.providers.azure_speech import AzureSpeechSynthesizer
+
+    return AzureSpeechSynthesizer(
+        settings.azure_speech_key.get_secret_value(), settings.azure_speech_region
     )

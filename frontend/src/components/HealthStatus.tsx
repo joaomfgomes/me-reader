@@ -7,6 +7,7 @@ const CHECK_LABELS: Record<string, string> = {
   database: "A base de dados aceita escrita",
   data_dir: "A pasta de dados aceita escrita",
   migrations: "As migrações estão na última versão",
+  speech: "O serviço de voz responde",
 };
 
 const REFRESH_INTERVAL_MS = 10_000;
@@ -42,11 +43,17 @@ export function HealthStatus() {
   return (
     // <details> é um elemento nativo que abre e fecha ao clicar no <summary>,
     // sem precisar de JavaScript nem de estado no React.
-    <details role="status" open={!data.healthy}>
+    <details role="status" open={!data.healthy || data.degraded}>
       <summary className="cursor-pointer list-none">
         <Summary
-          tone={data.healthy ? "good" : "bad"}
-          title={data.healthy ? "Sistema saudável" : "Sistema com problemas"}
+          tone={data.healthy && !data.degraded ? "good" : "bad"}
+          title={
+            !data.healthy
+              ? "Sistema com problemas"
+              : data.degraded
+                ? "A funcionar, mas o serviço de voz falhou"
+                : "Sistema saudável"
+          }
         />
       </summary>
       <ul className="mt-2 space-y-1 text-pencil">
@@ -61,6 +68,12 @@ export function HealthStatus() {
           </li>
         ))}
       </ul>
+      {data.healthy && data.degraded && (
+        <p className="mt-2 text-pencil">
+          Podes continuar a ler e a ouvir o áudio já gerado. O áudio novo volta quando o serviço
+          responder.
+        </p>
+      )}
       {!data.healthy && (
         <p className="mt-2 text-pencil">
           Corre <code>make migrate</code> e confirma as permissões da pasta de dados.

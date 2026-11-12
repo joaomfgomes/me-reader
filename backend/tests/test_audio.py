@@ -9,6 +9,7 @@ import logging
 import time
 import wave
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import FastAPI
@@ -16,7 +17,12 @@ from fastapi.testclient import TestClient
 
 from app.audio.alignment import TimedWord, align_timings
 from app.audio.service import audio_cache_key, get_block_audio
-from app.audio.voice import SpeechProviderError, SynthesisResult, WordTiming
+from app.audio.voice import (
+    SpeechProviderError,
+    SynthesisResult,
+    TrackedSynthesizer,
+    WordTiming,
+)
 from app.core.config import Settings
 from app.providers.fake_speech import FakeSpeechSynthesizer
 from tests.epub_factory import make_epub
@@ -488,10 +494,12 @@ def test_alignment_matches_by_position_when_punctuation_is_attached() -> None:
     aligned = align_timings(words, timings)
 
     assert text[8:11] == "sat"
+    # "sat" ocupa três dos quatro caracteres de "sat.", por isso fica com
+    # três quartos do intervalo desse tempo.
     assert aligned == [
         TimedWord(0, 3, 0, 200),
         TimedWord(4, 7, 250, 500),
-        TimedWord(8, 11, 550, 900),
+        TimedWord(8, 11, 550, 812),
     ]
 
 
@@ -503,12 +511,27 @@ def test_alignment_merges_several_timings_into_one_word() -> None:
     assert align_timings(words, timings) == [TimedWord(0, 11, 100, 700)]
 
 
-def test_alignment_shares_one_timing_between_two_words() -> None:
-    # O serviço trata "New York" como uma só unidade.
+def test_alignment_splits_one_timing_between_the_words_it_covers() -> None:
+    # O serviço trata "New York" como uma só unidade de 600 ms. Cada palavra
+    # fica com a parte que lhe corresponde, pela posição no texto.
     words = [(0, 3), (4, 8)]
     timings = [timing(0, 8, 0, 600)]
 
-    assert align_timings(words, timings) == [TimedWord(0, 3, 0, 600), TimedWord(4, 8, 0, 600)]
+    assert align_timings(words, timings) == [TimedWord(0, 3, 0, 225), TimedWord(4, 8, 300, 600)]
+
+
+def test_words_sharing_a_timing_are_highlighted_in_reading_order() -> None:
+    # Caso real do Azure: "las 8:30 p. m." chega como um só tempo.
+    text = "las 8:30 p. m."
+    words = [(0, 3), (4, 5), (6, 8), (9, 10), (12, 13)]
+    timings = [timing(0, len(text), 1000, 2400)]
+
+    aligned = align_timings(words, timings)
+
+    starts = [word.start_ms for word in aligned]
+    assert starts == sorted(set(starts))
+    assert aligned[0].start_ms == 1000
+    assert aligned[-1].end_ms <= 2400
 
 
 def test_word_without_any_timing_gets_none() -> None:
@@ -546,3 +569,38 @@ def test_fake_synthesizer_times_point_at_the_text() -> None:
     with wave.open(io.BytesIO(result.audio)) as wav_file:
         seconds = wav_file.getnframes() / wav_file.getframerate()
     assert seconds * 1000 == pytest.approx(result.duration_ms, abs=1)
+
+
+# --- Estado do serviço de voz no /health ------------------------------------
+
+
+def test_health_is_degraded_after_a_voice_failure_and_recovers(
+    app: FastAPI, client: TestClient, book: dict
+) -> None:
+    # Aqui usamos o fornecedor tal como a aplicação o monta, embrulhado pelo
+    # TrackedSynthesizer, e trocamos só o fornecedor de dentro.
+    inner = RecordingSynthesizer()
+    app.state.speech = TrackedSynthesizer(inner)
+    block_id = block_id_of(client, book["id"])
+
+    inner.fail = True
+    assert request_audio(client, block_id).status_code == 502
+    degraded = client.get("/api/v1/health")
+
+    # O sistema continua a responder 200: ler e ouvir o que está em cache funciona.
+    assert degraded.status_code == 200
+    assert degraded.json()["status"] == "degraded"
+    assert degraded.json()["checks"]["speech"] == "error"
+    assert degraded.json()["checks"]["database"] == "ok"
+
+    inner.fail = False
+    assert request_audio(client, block_id).status_code == 200
+    assert client.get("/api/v1/health").json()["status"] == "ok"
+
+
+def test_old_voice_failures_stop_counting(app: FastAPI, client: TestClient) -> None:
+    tracked = TrackedSynthesizer(RecordingSynthesizer())
+    tracked.last_failure_at = datetime.now(UTC) - timedelta(minutes=11)
+    app.state.speech = tracked
+
+    assert client.get("/api/v1/health").json()["status"] == "ok"

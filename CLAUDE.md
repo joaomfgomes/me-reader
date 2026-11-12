@@ -6,13 +6,9 @@ A arquitetura completa está em `docs/arquitetura.md` e as decisões em `docs/ad
 
 ## Fase em curso
 
-**Fase 2 em curso, dividida em três entregas.** Atualiza esta secção no fim de cada fase.
+**Fase 2 concluída (2026-11-12). A seguinte é a Fase 3, tutor de palavra, que só começa com pedido explícito.** Atualiza esta secção no fim de cada fase.
 
-1. Áudio no backend com fornecedor simulado: feita (2026-11-11).
-2. Fornecedor Azure em `providers/`, com os tempos mapeados pelos offsets de texto. Por fazer; precisa do recurso Azure AI Speech (escalão F0) e da chave no `.env`.
-3. Frontend: leitor de áudio, destaque palavra a palavra, velocidade, confirmação de documentos privados e página "Custos". Feita (2026-11-11), com a voz simulada.
-
-Cada entrega tem o seu plano e a sua aprovação; não avances para a seguinte sem pedido explícito.
+Antes da Fase 3 é preciso: escolher o fornecedor de LLM e aprovar o ADR-005.
 
 O que existe da Fase 0: backend FastAPI com `GET /api/v1/health`, SQLite em modo WAL, validação do cabeçalho Host, erros em `problem+json`, logs JSON com identificador por pedido, e um frontend com uma página de estado.
 
@@ -33,8 +29,11 @@ O que existe da Fase 2:
 
 - `audio/voice.py`: a interface `SpeechSynthesizer`. Os tempos das palavras vêm por posição no texto enviado (`WordTiming`), nunca por ordem.
 - `providers/fake_speech.py`: fornecedor simulado, escolhido com `READER_SPEECH_PROVIDER=fake` (o valor por omissão). Gera um bip por palavra. `create_speech_synthesizer` em `providers/__init__.py` escolhe a implementação.
+- `providers/azure_speech.py`: fornecedor Azure AI Speech (`READER_SPEECH_PROVIDER=azure`, com `AZURE_SPEECH_KEY` e `AZURE_SPEECH_REGION`). Usa o SDK `azure-cognitiveservices-speech`, de licença proprietária da Microsoft, porque a API REST não devolve tempos por palavra. Envia texto simples, não SSML. `timings_from_boundaries` confirma cada posição contra o texto antes de a aceitar.
+- `make voice-check` (`providers/voice_check.py`): verificação manual com uma frase difícil por língua. Faz chamadas verdadeiras; não faz parte dos testes.
+- `TrackedSynthesizer` (em `audio/voice.py`) regista a última falha do serviço de voz; o `/health` responde `degraded` (com 200) durante dez minutos depois de uma falha.
 - `audio/service.py`: `get_block_audio` devolve o áudio da cache ou sintetiza. A chave é `audio_cache_key(texto do bloco, voz, versão da limpeza do documento)`. Um cadeado por chave evita sínteses duplicadas.
-- `audio/alignment.py`: liga os tempos do fornecedor às nossas palavras por sobreposição de posições.
+- `audio/alignment.py`: liga os tempos do fornecedor às nossas palavras por sobreposição de posições. O Azure junta expressões como "in 1865" num só tempo; o intervalo é repartido pelas palavras em proporção da posição no texto.
 - Tabelas `audio_assets` (por hash), `block_audio` (que blocos usam que áudio) e `usage_events` (migração `0004`).
 - `usage/service.py`: registo de consumo e teto mensal (`READER_MONTHLY_TTS_CHAR_LIMIT`).
 - `api/audio.py`: `POST /blocks/{id}/audio`, `GET /audio/{hash}` (com pedidos parciais), `POST /documents/{id}/audio/estimate` e `GET /usage`.
@@ -83,7 +82,7 @@ O MVP são as fases 0 a 3. Implementa uma fase de cada vez e não avances para a
 - **Backend:** Python 3.12, FastAPI, Pydantic, SQLAlchemy 2, Alembic, SQLite em modo WAL. Gestão com `uv`.
 - **Frontend:** React, Vite, TypeScript, React Router, TanStack Query, Tailwind. Gestão com `pnpm`.
 - **Texto:** leitura direta do ZIP com `zipfile` + defusedxml + BeautifulSoup (EPUB), pypdf ou pdfplumber (PDF), pySBD (frases), lingua (deteção de língua).
-- **Voz:** Azure AI Speech, vozes Neural, com os tempos por palavra devolvidos pelo serviço.
+- **Voz:** Azure AI Speech, vozes Neural, com os tempos por palavra devolvidos pelo serviço, através do SDK `azure-cognitiveservices-speech`.
 - **Tutor:** LLM de baixo custo, com saída JSON validada por Pydantic.
 - **Qualidade:** ruff, pytest, Vitest, gitleaks, GitHub Actions.
 
@@ -129,6 +128,7 @@ Comandos úteis fora do Makefile:
 - Um só teste do backend: `cd backend && uv run pytest tests/test_health.py -k nome`.
 - Nova migração: `cd backend && uv run alembic revision --autogenerate -m "descrição"`. Revê sempre o ficheiro gerado.
 - Confirmar que modelos e migrações coincidem: `cd backend && uv run alembic check`.
+- Testar o fornecedor de voz do `.env` com chamadas verdadeiras: `make voice-check` (gasta cerca de 400 caracteres de quota).
 - Todas as verificações de pre-commit: `cd backend && uv run pre-commit run --all-files`.
 
 Os testes do backend criam a aplicação com `create_app(settings)` e uma pasta de dados temporária (ver `backend/tests/conftest.py`). O `TestClient` tem de usar `base_url="http://localhost"`, senão a validação do Host rejeita os pedidos. EPUBs de teste estragados ou maliciosos geram-se com `tests/epub_factory.py`; o livro real está em `backend/tests/fixtures/`.
@@ -160,6 +160,6 @@ Os testes do frontend usam `mockApi` e `renderPage` de `frontend/src/test/helper
 ## Decisões em aberto
 
 - Fornecedor de LLM a usar primeiro (decidir antes da Fase 3).
-- Fornecedor de voz para a entrega 2 da Fase 2. Foi avaliado o Google Cloud TTS (2026-11-11): é possível, mas só dá tempos por marcas SSML na API v1beta1, não nas vozes Chirp 3 HD, e um bloco nosso não cabe num pedido de 5 000 bytes. Em troca, tem 4 M de caracteres grátis por mês em vozes WaveNet. Recomendação: Azure como principal, Google como segundo fornecedor se for preciso. Por decidir pelo autor.
-- Recurso Azure AI Speech no escalão gratuito F0: confirmar que existe antes da Fase 2.
+- Segundo fornecedor de voz. O autor escolheu o Azure (2026-11-12). O Google Cloud TTS foi avaliado e fica como alternativa se o escalão gratuito do Azure não chegar: só dá tempos por marcas SSML na API v1beta1, não nas vozes Chirp 3 HD, e um bloco nosso não cabe num pedido de 5 000 bytes; em troca, tem 4 M de caracteres grátis por mês em vozes WaveNet.
+- As vozes do Azure estão fixas em `providers/azure_speech.py` (inglês dos EUA, espanhol de Espanha, francês de França, alemão da Alemanha, italiano). Escolher a voz na interface fica para depois.
 - Os ADR-001 a 004 foram aceites a 2026-11-11. O ADR-005 (LLM) continua com estado "proposta" até o autor o aprovar, antes da Fase 3.

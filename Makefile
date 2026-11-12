@@ -1,7 +1,7 @@
 # Comandos do dia a dia. Corre "make" sem argumentos para ver a lista.
 #
 # .PHONY diz ao make que estes nomes são comandos e não ficheiros a construir.
-.PHONY: help setup dev dev-backend dev-frontend migrate test lint format
+.PHONY: help setup dev dev-backend dev-frontend migrate test lint format voice-check
 
 help:
 	@echo "make setup    instala dependências, cria o .env e ativa o pre-commit"
@@ -10,6 +10,7 @@ help:
 	@echo "make lint     verifica estilo, erros comuns e tipos"
 	@echo "make format   formata o código Python"
 	@echo "make migrate  aplica as migrações em falta à base de dados"
+	@echo "make voice-check  testa o fornecedor de voz configurado (gasta quota)"
 
 setup:
 	cd backend && uv sync
@@ -46,3 +47,8 @@ lint:
 format:
 	cd backend && uv run ruff check --fix .
 	cd backend && uv run ruff format .
+
+# Verificação manual do fornecedor de voz do .env, com uma frase por língua.
+# Com o Azure faz chamadas verdadeiras: gasta cerca de 400 caracteres da quota.
+voice-check:
+	cd backend && uv run python -m app.providers.voice_check

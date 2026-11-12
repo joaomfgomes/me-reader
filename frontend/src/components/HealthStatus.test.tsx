@@ -65,3 +65,16 @@ test("avisa quando não consegue falar com o backend", async () => {
 
   expect(await screen.findByText("Sem ligação ao servidor")).toBeInTheDocument();
 });
+
+test("distingue o serviço de voz em baixo de um problema do sistema", async () => {
+  stubFetch(200, {
+    status: "degraded",
+    checks: { database: "ok", data_dir: "ok", migrations: "ok", speech: "error" },
+  });
+
+  renderHealthStatus();
+
+  expect(await screen.findByText("A funcionar, mas o serviço de voz falhou")).toBeInTheDocument();
+  expect(screen.getByText("Falhou")).toBeInTheDocument();
+  expect(screen.getByText(/Podes continuar a ler/)).toBeInTheDocument();
+});

@@ -1,11 +1,12 @@
 """Interface de voz: o que a aplicação precisa de um serviço de síntese.
 
 O resto da app só conhece este ficheiro. As implementações concretas (o
-simulador e, na próxima entrega, o Azure) vivem em app/providers/ e podem ser
+simulador e o Azure) vivem em app/providers/ e podem ser
 trocadas sem mexer em mais nada (ADR-003).
 """
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Protocol
 
 
@@ -59,3 +60,31 @@ class SpeechSynthesizer(Protocol):
     def synthesize(self, text: str, voice: str) -> SynthesisResult:
         """Converte o texto em áudio. Lança SpeechProviderError se falhar."""
         ...
+
+
+class TrackedSynthesizer:
+    """Embrulha um fornecedor de voz e lembra-se de quando falhou pela última vez.
+
+    É o que permite ao /health dizer "degradado" quando o serviço de voz está
+    com problemas, sem fazer chamadas (pagas) só para o testar. O padrão
+    chama-se "decorator": tem a mesma interface do objeto embrulhado e
+    acrescenta-lhe um comportamento, sem que ele ou quem o usa tenham de mudar.
+    """
+
+    def __init__(self, inner: SpeechSynthesizer) -> None:
+        self._inner = inner
+        self.name = inner.name
+        self.last_failure_at: datetime | None = None
+
+    def voice_for(self, language: str) -> str:
+        return self._inner.voice_for(language)
+
+    def synthesize(self, text: str, voice: str) -> SynthesisResult:
+        try:
+            result = self._inner.synthesize(text, voice)
+        except SpeechProviderError:
+            self.last_failure_at = datetime.now(UTC)
+            raise
+        # Uma síntese bem-sucedida mostra que o serviço recuperou.
+        self.last_failure_at = None
+        return result

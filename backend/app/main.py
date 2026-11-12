@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.router import api_router
+from app.audio.voice import TrackedSynthesizer
 from app.core.config import Settings
 from app.core.db import create_db_engine, create_session_factory
 from app.core.errors import register_error_handlers
@@ -49,7 +50,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
     app.state.storage = DiskStorage(settings.data_dir / "files")
-    app.state.speech = create_speech_synthesizer(settings)
+    app.state.speech = TrackedSynthesizer(create_speech_synthesizer(settings))
 
     register_error_handlers(app)
 
