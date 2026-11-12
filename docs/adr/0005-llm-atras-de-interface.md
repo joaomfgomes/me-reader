@@ -1,6 +1,6 @@
 # ADR-005: LLM atrás de interface, com saída JSON validada e prompts versionados
 
-- **Estado:** proposta
+- **Estado:** aceite (2026-11-12)
 - **Data:** 2026-11-11
 
 ## Contexto

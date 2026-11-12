@@ -8,7 +8,7 @@ A arquitetura completa está em `docs/arquitetura.md` e as decisões em `docs/ad
 
 **Fase 2 concluída (2026-11-12). A seguinte é a Fase 3, tutor de palavra, que só começa com pedido explícito.** Atualiza esta secção no fim de cada fase.
 
-Antes da Fase 3 é preciso: escolher o fornecedor de LLM e aprovar o ADR-005.
+Para a Fase 3 já está decidido: o fornecedor de LLM é a Anthropic e o ADR-005 foi aprovado (2026-11-12).
 
 O que existe da Fase 0: backend FastAPI com `GET /api/v1/health`, SQLite em modo WAL, validação do cabeçalho Host, erros em `problem+json`, logs JSON com identificador por pedido, e um frontend com uma página de estado.
 
@@ -83,7 +83,7 @@ O MVP são as fases 0 a 3. Implementa uma fase de cada vez e não avances para a
 - **Frontend:** React, Vite, TypeScript, React Router, TanStack Query, Tailwind. Gestão com `pnpm`.
 - **Texto:** leitura direta do ZIP com `zipfile` + defusedxml + BeautifulSoup (EPUB), pypdf ou pdfplumber (PDF), pySBD (frases), lingua (deteção de língua).
 - **Voz:** Azure AI Speech, vozes Neural, com os tempos por palavra devolvidos pelo serviço, através do SDK `azure-cognitiveservices-speech`.
-- **Tutor:** LLM de baixo custo, com saída JSON validada por Pydantic.
+- **Tutor:** LLM de baixo custo da Anthropic, atrás de interface própria, com saída JSON validada por Pydantic.
 - **Qualidade:** ruff, pytest, Vitest, gitleaks, GitHub Actions.
 
 Não uses PyMuPDF nem EbookLib (licença AGPL); confirma a licença de qualquer dependência nova antes de a acrescentar. Não acrescentes Redis, filas, Docker, Postgres nem autenticação nesta fase.
@@ -159,7 +159,7 @@ Os testes do frontend usam `mockApi` e `renderPage` de `frontend/src/test/helper
 
 ## Decisões em aberto
 
-- Fornecedor de LLM a usar primeiro (decidir antes da Fase 3).
+- Modelo concreto da Anthropic para o tutor: escolher o mais barato que explique bem em pt-PT, com o conjunto de teste de 20 frases por língua previsto no ADR-005.
 - Segundo fornecedor de voz. O autor escolheu o Azure (2026-11-12). O Google Cloud TTS foi avaliado e fica como alternativa se o escalão gratuito do Azure não chegar: só dá tempos por marcas SSML na API v1beta1, não nas vozes Chirp 3 HD, e um bloco nosso não cabe num pedido de 5 000 bytes; em troca, tem 4 M de caracteres grátis por mês em vozes WaveNet.
-- As vozes do Azure estão fixas em `providers/azure_speech.py` (inglês dos EUA, espanhol de Espanha, francês de França, alemão da Alemanha, italiano). Escolher a voz na interface fica para depois.
-- Os ADR-001 a 004 foram aceites a 2026-11-11. O ADR-005 (LLM) continua com estado "proposta" até o autor o aprovar, antes da Fase 3.
+- As vozes do Azure estão fixas em `providers/azure_speech.py`. O autor confirmou que quer inglês dos EUA (2026-11-12); as outras são espanhol de Espanha, francês de França, alemão da Alemanha e italiano. Escolher a voz na interface fica para depois.
+- Os cinco ADRs estão aceites (001 a 004 a 2026-11-11, 005 a 2026-11-12).
