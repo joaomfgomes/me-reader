@@ -10,7 +10,7 @@ A arquitetura completa está em `docs/arquitetura.md` e as decisões em `docs/ad
 
 1. Áudio no backend com fornecedor simulado: feita (2026-11-11).
 2. Fornecedor Azure em `providers/`, com os tempos mapeados pelos offsets de texto. Por fazer; precisa do recurso Azure AI Speech (escalão F0) e da chave no `.env`.
-3. Frontend: leitor de áudio, destaque palavra a palavra, velocidade, confirmação de documentos privados e página "Custos". Por fazer.
+3. Frontend: leitor de áudio, destaque palavra a palavra, velocidade, confirmação de documentos privados e página "Custos". Feita (2026-11-11), com a voz simulada.
 
 Cada entrega tem o seu plano e a sua aprovação; não avances para a seguinte sem pedido explícito.
 
@@ -39,6 +39,9 @@ O que existe da Fase 2:
 - `usage/service.py`: registo de consumo e teto mensal (`READER_MONTHLY_TTS_CHAR_LIMIT`).
 - `api/audio.py`: `POST /blocks/{id}/audio`, `GET /audio/{hash}` (com pedidos parciais), `POST /documents/{id}/audio/estimate` e `GET /usage`.
 - Documentos privados: gerar áudio novo exige `confirm_private: true` no pedido; o que está em cache toca sem confirmação.
+- Frontend do áudio, em `frontend/src/reader/`: `useAudioPlayer.ts` (pede o áudio bloco a bloco, toca e sincroniza), `ChapterText.tsx` (texto com um `<span data-word-key>` por palavra) e `PlayerBar.tsx` (comandos, estimativa e confirmação de privado). A palavra em curso é acesa diretamente no DOM com a classe `word-now`; a frase em curso passa pelo React (`sentence-now`).
+- Com áudio a tocar, a posição guardada é a frase que está a ser dita; sem áudio, a primeira frase visível.
+- Página "Custos" em `/custos` (`pages/CostsPage.tsx`), com aviso a partir de 80% do teto.
 
 Os módulos `tutor` e `vocabulary` estão vazios.
 
@@ -56,7 +59,9 @@ Por decidir ou por fazer mais tarde:
 - Mudar a língua de um documento não volta a dividir as frases.
 
 - Os títulos dos capítulos ficam também como primeiro parágrafo do texto. O leitor mostra esse parágrafo como cabeçalho quando é igual ao título.
-- As palavras ainda não têm elementos próprios no leitor; passam a ter na Fase 2, para o destaque.
+- Clicar numa frase toca a partir dela. Na Fase 3, clicar numa palavra vai abrir o tutor; é preciso separar os dois gestos nessa altura.
+- No fim de um capítulo o áudio pára; não passa sozinho ao seguinte.
+- A confirmação de um documento privado fica só em memória, até fechar o separador.
 - As palavras são separadas pela mesma regra nas cinco línguas. Em francês e italiano, "l'homme" conta como uma palavra; rever na Fase 3, quando se carregar em palavras.
 - A cópia diária da base de dados prevista na arquitetura não está feita; só a que antecede as migrações.
 - A pré-geração de um capítulo inteiro em fundo não está feita; o áudio é gerado bloco a bloco, a pedido.
@@ -155,5 +160,6 @@ Os testes do frontend usam `mockApi` e `renderPage` de `frontend/src/test/helper
 ## Decisões em aberto
 
 - Fornecedor de LLM a usar primeiro (decidir antes da Fase 3).
+- Fornecedor de voz para a entrega 2 da Fase 2. Foi avaliado o Google Cloud TTS (2026-11-11): é possível, mas só dá tempos por marcas SSML na API v1beta1, não nas vozes Chirp 3 HD, e um bloco nosso não cabe num pedido de 5 000 bytes. Em troca, tem 4 M de caracteres grátis por mês em vozes WaveNet. Recomendação: Azure como principal, Google como segundo fornecedor se for preciso. Por decidir pelo autor.
 - Recurso Azure AI Speech no escalão gratuito F0: confirmar que existe antes da Fase 2.
 - Os ADR-001 a 004 foram aceites a 2026-11-11. O ADR-005 (LLM) continua com estado "proposta" até o autor o aprovar, antes da Fase 3.

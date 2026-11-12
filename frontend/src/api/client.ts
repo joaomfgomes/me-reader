@@ -13,6 +13,8 @@ export class ApiError extends Error {
     readonly code: string,
     title: string,
     readonly detail?: string,
+    /** Campos extra que alguns erros trazem, como "characters" ou "checks". */
+    readonly extras: Record<string, unknown> = {},
   ) {
     super(title);
     this.name = "ApiError";
@@ -33,16 +35,15 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<A
   if (!response.ok) {
     // Se o corpo não for o JSON esperado (backend desligado, por exemplo),
     // ficamos com um erro genérico em vez de rebentar aqui.
-    const problem = (await response.json().catch(() => null)) as {
-      code?: string;
-      title?: string;
-      detail?: string;
-    } | null;
+    const problem = (await response.json().catch(() => null)) as
+      | ({ code?: string; title?: string; detail?: string } & Record<string, unknown>)
+      | null;
     throw new ApiError(
       response.status,
       problem?.code ?? "unknown_error",
       problem?.title ?? `Erro HTTP ${response.status}`,
       problem?.detail,
+      problem ?? {},
     );
   }
 

@@ -85,3 +85,19 @@ html[data-theme="dark"] {
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
+
+/* Durante a leitura em voz alta: a frase em curso fica com um fundo leve e a
+   palavra que está a ser dita leva o marcador. color-mix mistura o amarelo
+   com transparente, para o fundo da frase ser uma versão suave da mesma cor. */
+.sentence-now {
+  background: color-mix(in srgb, var(--marker) 28%, transparent);
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.word-now {
+  background: var(--marker);
+  color: var(--marker-ink);
+  border-radius: 2px;
+}

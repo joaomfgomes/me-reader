@@ -11,13 +11,17 @@ export interface Preferences {
   theme: Theme;
   /** Tamanho da letra do texto do livro, em píxeis. */
   fontSize: number;
+  /** Velocidade do áudio: 1 é a normal. */
+  playbackRate: number;
 }
+
+export const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5];
 
 export const FONT_SIZE_MIN = 16;
 export const FONT_SIZE_MAX = 28;
 export const FONT_SIZE_STEP = 2;
 
-const DEFAULTS: Preferences = { theme: "system", fontSize: 20 };
+const DEFAULTS: Preferences = { theme: "system", fontSize: 20, playbackRate: 1 };
 const STORAGE_KEY = "reader.preferences";
 
 function loadPreferences(): Preferences {
@@ -30,7 +34,10 @@ function loadPreferences(): Preferences {
       typeof stored.fontSize === "number"
         ? Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, stored.fontSize))
         : DEFAULTS.fontSize;
-    return { theme, fontSize };
+    const playbackRate = PLAYBACK_RATES.includes(stored.playbackRate ?? NaN)
+      ? (stored.playbackRate as number)
+      : DEFAULTS.playbackRate;
+    return { theme, fontSize, playbackRate };
   } catch {
     // Valor corrompido ou localStorage indisponível (modo privado, por
     // exemplo): usamos as predefinições em vez de falhar.
@@ -47,6 +54,7 @@ interface PreferencesContextValue {
   preferences: Preferences;
   setTheme: (theme: Theme) => void;
   changeFontSize: (delta: number) => void;
+  setPlaybackRate: (rate: number) => void;
 }
 
 // Um "contexto" do React disponibiliza um valor a todos os componentes dentro
@@ -94,6 +102,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         ...current,
         fontSize: Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, current.fontSize + delta)),
       })),
+    setPlaybackRate: (playbackRate) => setPreferences((current) => ({ ...current, playbackRate })),
   };
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

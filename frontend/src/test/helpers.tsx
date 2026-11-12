@@ -13,6 +13,9 @@ interface MockResponse {
   body?: unknown;
 }
 
+/** Uma resposta fixa, ou uma função que a escolhe a partir do pedido. */
+type MockRoute = MockResponse | ((call: ApiCall) => MockResponse);
+
 export interface ApiCall {
   method: string;
   path: string;
@@ -26,7 +29,7 @@ export interface ApiCall {
  * Devolve a lista dos pedidos feitos, para os testes confirmarem o que foi
  * enviado. Os testes nunca fazem pedidos de rede verdadeiros.
  */
-export function mockApi(routes: Record<string, MockResponse>): ApiCall[] {
+export function mockApi(routes: Record<string, MockRoute>): ApiCall[] {
   const calls: ApiCall[] = [];
   vi.stubGlobal(
     "fetch",
@@ -34,9 +37,11 @@ export function mockApi(routes: Record<string, MockResponse>): ApiCall[] {
       const method = init?.method ?? "GET";
       const path = String(input).replace("/api/v1", "");
       const body = typeof init?.body === "string" ? JSON.parse(init.body) : init?.body;
-      calls.push({ method, path, body });
+      const call = { method, path, body };
+      calls.push(call);
 
-      const route = routes[`${method} ${path}`];
+      const configured = routes[`${method} ${path}`];
+      const route = typeof configured === "function" ? configured(call) : configured;
       if (!route) {
         const problem = { code: "not_found", title: "Recurso não encontrado", status: 404 };
         return new Response(JSON.stringify(problem), { status: 404 });

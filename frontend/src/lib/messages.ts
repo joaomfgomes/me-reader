@@ -21,6 +21,13 @@ const ERROR_MESSAGES: Record<string, string> = {
   document_not_found: "Este livro já não está na biblioteca.",
   chapter_not_found: "O livro não tem esse capítulo.",
   unsupported_language: "Essa língua não é suportada.",
+  language_required:
+    "Este livro não tem língua definida. Escolhe-a na biblioteca para o poderes ouvir.",
+  tts_quota_exceeded:
+    "Atingiste o teto mensal de voz. O áudio já gerado continua a tocar; o resto fica disponível no início do próximo mês.",
+  tts_provider_error: "O serviço de voz falhou. Tenta outra vez daqui a pouco.",
+  block_not_found: "Este texto já não existe. Volta à biblioteca e abre o livro outra vez.",
+  playback_failed: "O browser não conseguiu tocar o áudio. Tenta outra vez.",
 };
 
 const FALLBACK_MESSAGE =

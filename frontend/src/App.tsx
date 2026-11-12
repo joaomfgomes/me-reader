@@ -1,7 +1,8 @@
-import { Route, Routes } from "react-router";
+import { Link, Route, Routes } from "react-router";
 
 import { HealthStatus } from "./components/HealthStatus";
 import { usePreferences, type Theme } from "./lib/preferences";
+import { CostsPage } from "./pages/CostsPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { ReaderPage } from "./pages/ReaderPage";
 
@@ -14,6 +15,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<LibraryPage />} />
           <Route path="/documents/:id" element={<ReaderPage />} />
+          <Route path="/custos" element={<CostsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
@@ -28,6 +30,14 @@ function Footer() {
     <footer className="border-t border-rule">
       <div className="mx-auto flex max-w-5xl flex-wrap items-start justify-between gap-4 px-5 py-4 text-sm">
         <HealthStatus />
+        <nav aria-label="Páginas" className="flex gap-5">
+          <Link to="/" className="text-pen underline underline-offset-4">
+            Biblioteca
+          </Link>
+          <Link to="/custos" className="text-pen underline underline-offset-4">
+            Custos
+          </Link>
+        </nav>
         <label className="flex items-center gap-2">
           <span className="text-pencil">Tema</span>
           <select

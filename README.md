@@ -6,7 +6,7 @@ Corre só no teu Mac, como app web local, sem contas nem pagamentos.
 
 ## Estado
 
-**Fase 2 (áudio com destaque) em curso.** A Fase 1 está concluída: importas um EPUB, vê-lo na biblioteca e lê-lo, com modo escuro, tamanho de letra ajustável e a posição de leitura guardada. Da Fase 2 existe o lado do servidor (cache de áudio, estimativa de custo, teto mensal e registo de consumo), a funcionar com uma voz simulada que não faz chamadas externas. Ainda não se ouve nada na aplicação: faltam a ligação ao Azure AI Speech e o leitor de áudio.
+**Fase 2 (áudio com destaque) em curso.** Já podes importar um EPUB, lê-lo e ouvi-lo com a palavra em curso destacada, mudar a velocidade, saltar entre frases, ver quanto custaria o áudio e consultar o consumo do mês na página "Custos". Por agora a voz é simulada: ouve-se um bip por palavra, sem chamadas externas nem custos. Falta ligar um serviço de voz verdadeiro.
 
 O plano completo está em [docs/arquitetura.md](docs/arquitetura.md) e as decisões em [docs/adr/](docs/adr/).
 
@@ -69,7 +69,8 @@ backend/app/usage/       registo de consumo e teto mensal
 backend/app/<módulo>/    tutor, vocabulary (ainda vazios)
 backend/migrations/      migrações Alembic
 backend/tests/           testes do backend
-frontend/src/pages/      biblioteca e leitor
+frontend/src/pages/      biblioteca, leitor e custos
+frontend/src/reader/     texto do capítulo e leitor de áudio
 frontend/src/api/        chamadas ao backend
 frontend/src/lib/        preferências e textos da interface
 data/                    base de dados, ficheiros, cópias de segurança e logs; fora do git

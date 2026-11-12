@@ -1,46 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 
 import {
   getChapter,
   getDocument,
   savePosition,
-  type Block,
   type ChapterSummary,
   type DocumentDetail,
-  type Sentence,
 } from "../api/documents";
 import { errorMessage } from "../lib/messages";
 import { FONT_SIZE_MAX, FONT_SIZE_MIN, FONT_SIZE_STEP, usePreferences } from "../lib/preferences";
+import { ChapterText, HEADER_OFFSET_PX } from "../reader/ChapterText";
+import { PlayerBar } from "../reader/PlayerBar";
+import { useAudioPlayer } from "../reader/useAudioPlayer";
 
 // Tempo de espera depois do último movimento antes de guardar a posição.
 // Evita fazer um pedido por cada píxel de scroll.
 export const SAVE_DELAY_MS = 700;
 
-// Altura da barra fixa no topo. Uma frase só conta como "visível" abaixo dela.
-const HEADER_OFFSET_PX = 72;
-
 function chapterLabel(chapter: ChapterSummary): string {
   return chapter.title ?? `Parte ${chapter.position + 1}`;
-}
-
-/** Agrupa as frases de um bloco por parágrafo, usando os "\n" do texto. */
-function paragraphsOf(block: Block): Sentence[][] {
-  const paragraphs: Sentence[][] = [];
-  let current: Sentence[] = [];
-  let paragraphEnd = block.text.indexOf("\n");
-  for (const sentence of block.sentences) {
-    // Uma frase que começa depois da quebra pertence ao parágrafo seguinte.
-    while (paragraphEnd !== -1 && sentence.start_offset > paragraphEnd) {
-      paragraphs.push(current);
-      current = [];
-      paragraphEnd = block.text.indexOf("\n", paragraphEnd + 1);
-    }
-    current.push(sentence);
-  }
-  paragraphs.push(current);
-  return paragraphs.filter((paragraph) => paragraph.length > 0);
 }
 
 /** A primeira frase visível abaixo da barra do topo, ou a primeira do capítulo. */
@@ -52,6 +32,10 @@ function firstVisibleSentenceId(container: HTMLElement): number | null {
     }
   }
   return sentences[0] ? Number(sentences[0].dataset.sentenceId) : null;
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
 export function ReaderPage() {
@@ -107,12 +91,39 @@ export function ReaderPage() {
       );
     },
   });
+  const saveSentence = useCallback(
+    (sentenceId: number) => {
+      if (sentenceId !== lastSaved.current) {
+        lastSaved.current = sentenceId;
+        save.mutate(sentenceId);
+      }
+    },
+    // "save" muda a cada pedido; a função mutate em si é sempre a mesma.
+    [save.mutate],
+  );
 
   const article = useRef<HTMLElement>(null);
   // A frase a marcar e para onde saltar, se este for o capítulo onde o leitor parou.
   const resumeSentenceId =
     resume !== null && resume.chapter === chapterPosition ? resume.sentenceId : null;
   const jumped = useRef(false);
+
+  const player = useAudioPlayer({
+    documentId,
+    chapter,
+    playbackRate: preferences.playbackRate,
+    container: article,
+    // "Ouvir" começa na frase onde o leitor parou ou, se já andou pela
+    // página, na primeira frase que tem à frente.
+    getStartSentenceId: () =>
+      (window.scrollY === 0 ? resumeSentenceId : null) ??
+      (article.current ? firstVisibleSentenceId(article.current) : null),
+  });
+  const audioActive = player.status === "playing" || player.status === "loading";
+  // O valor mais recente fica num ref para o ouvinte de scroll o ler sem ter
+  // de ser registado outra vez sempre que o estado do áudio muda.
+  const audioActiveRef = useRef(audioActive);
+  audioActiveRef.current = audioActive;
 
   // Quando um capítulo acaba de carregar: saltar para a frase guardada, ou
   // voltar ao topo se for outro capítulo.
@@ -131,8 +142,8 @@ export function ReaderPage() {
     }
   }, [chapter, resumeSentenceId]);
 
-  // Guardar a posição: a primeira frase visível, pouco depois de o leitor
-  // parar de fazer scroll e também ao abrir um capítulo.
+  // Sem áudio a tocar, a posição é a primeira frase visível, guardada pouco
+  // depois de o leitor parar de fazer scroll e também ao abrir um capítulo.
   useEffect(() => {
     if (!chapter) {
       return;
@@ -141,10 +152,13 @@ export function ReaderPage() {
     const schedule = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
-        const sentenceId = article.current ? firstVisibleSentenceId(article.current) : null;
-        if (sentenceId !== null && sentenceId !== lastSaved.current) {
-          lastSaved.current = sentenceId;
-          save.mutate(sentenceId);
+        // Com áudio a tocar, quem manda na posição é a frase que está a ser dita.
+        if (audioActiveRef.current || !article.current) {
+          return;
+        }
+        const sentenceId = firstVisibleSentenceId(article.current);
+        if (sentenceId !== null) {
+          saveSentence(sentenceId);
         }
       }, SAVE_DELAY_MS);
     };
@@ -156,9 +170,30 @@ export function ReaderPage() {
       window.clearTimeout(timer);
       window.removeEventListener("scroll", schedule);
     };
-    // "save" fica de fora das dependências de propósito: muda a cada pedido
-    // e faria o efeito recomeçar sem necessidade.
-  }, [chapter]);
+  }, [chapter, saveSentence]);
+
+  // Com áudio, a posição é a frase que está a ser dita, e a página acompanha-a.
+  const spokenSentenceId = player.currentSentenceId;
+  useEffect(() => {
+    if (spokenSentenceId === null) {
+      return;
+    }
+    saveSentence(spokenSentenceId);
+    const element = article.current?.querySelector(`[data-sentence-id="${spokenSentenceId}"]`);
+    if (!element) {
+      return;
+    }
+    // Só mexemos na página se a frase estiver a sair da zona confortável do
+    // ecrã; mexer a cada frase seria enjoativo.
+    const { top, bottom } = element.getBoundingClientRect();
+    const comfortable = top >= HEADER_OFFSET_PX + 8 && bottom <= window.innerHeight * 0.7;
+    if (!comfortable) {
+      element.scrollIntoView?.({
+        block: "center",
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
+      });
+    }
+  }, [spokenSentenceId, saveSentence]);
 
   if (documentQuery.isError) {
     return (
@@ -176,8 +211,6 @@ export function ReaderPage() {
   const chapters = document?.chapters ?? [];
   const previous = chapters.find((item) => item.position === chapterPosition - 1);
   const next = chapters.find((item) => item.position === chapterPosition + 1);
-  // O primeiro parágrafo de um capítulo costuma ser o seu título.
-  let titleShown = false;
 
   return (
     <>
@@ -239,40 +272,15 @@ export function ReaderPage() {
             </p>
           )}
 
-          {chapter?.blocks.map((block) =>
-            paragraphsOf(block).map((sentences) => {
-              const text = sentences.map((sentence) => sentence.text).join(" ");
-              const isTitle = !titleShown && text === chapter.title;
-              titleShown = true;
-              const content = sentences.map((sentence, index) => (
-                // Cada frase tem o seu elemento, identificado pelo id. É por
-                // aqui que se guarda a posição e, nas próximas fases, que se
-                // destaca a frase que está a ser lida em voz alta.
-                <span key={sentence.id}>
-                  {index > 0 && " "}
-                  <span
-                    data-sentence-id={sentence.id}
-                    className={resumeSentenceId === sentence.id ? "marked" : undefined}
-                    // Ao saltar para uma frase, deixa-a abaixo da barra fixa.
-                    style={{ scrollMarginTop: HEADER_OFFSET_PX + 16 }}
-                  >
-                    {sentence.text}
-                  </span>
-                </span>
-              ));
-              return isTitle ? (
-                <h1
-                  key={sentences[0].id}
-                  className="mb-[1.2em] text-[1.6em] leading-tight font-semibold"
-                >
-                  {content}
-                </h1>
-              ) : (
-                <p key={sentences[0].id} className="mt-[0.85em]">
-                  {content}
-                </p>
-              );
-            }),
+          {chapter && (
+            <ChapterText
+              chapter={chapter}
+              // Depois de o áudio começar, a marca de "paraste aqui" já
+              // cumpriu o seu papel e dá lugar ao destaque da leitura.
+              markedSentenceId={spokenSentenceId === null ? resumeSentenceId : null}
+              activeSentenceId={spokenSentenceId}
+              onSentenceClick={player.playFromSentence}
+            />
           )}
         </article>
 
@@ -298,6 +306,10 @@ export function ReaderPage() {
           </nav>
         )}
       </main>
+
+      {chapter && (
+        <PlayerBar player={player} documentId={documentId} chapterPosition={chapterPosition} />
+      )}
     </>
   );
 }
